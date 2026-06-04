@@ -2,7 +2,7 @@
 __pycache__/
 *.py[codz]
 *$py.class
-
+PRIVATE_CONTEXT.md 
 # C extensions
 *.so
 
@@ -202,6 +202,16 @@ cython_debug/
 # .vscode/
 # Temporary file for partial code execution
 tempCodeRunnerFile.py
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+.env.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
 # Ruff stuff:
 .ruff_cache/
