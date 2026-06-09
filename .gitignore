@@ -3,6 +3,8 @@ __pycache__/
 *.py[codz]
 *$py.class
 PRIVATE_CONTEXT.md 
+.env.local
+
 # C extensions
 *.so
 
