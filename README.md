@@ -6,52 +6,104 @@
 
 **Team Name:** The Musketeers
 
-Members
 | Member | Role |
-|----------|----------|
+| --- | --- |
 | Member 1 | Frontend Lead |
 | Thant Zaw *(ThantZaw-cs)* | AI / Reka Integration |
 | Member 3 | Backend & Database |
 | Member 4 | Product & Research |
 
----
+## Problem
 
-This project was developed for the SummerBuild 2026 Hackathon.
+Current civic reporting platforms are slow and frustrating for both citizens and agencies.
 
-### Problem
+Citizen-side pain points:
 
-The current civic reporting platforms are convoluted and are tedious as they have many different categories that users have to select from. Since many government services are tied into a single platform, it creates cconfusion through the detailed reports we must write in order to call forth the correct service. This not only creates friction for citizens as they may not want to go through such hassles, but it also creates friction for the government to work efficiently as they have to skim through the reports and resources are wasted.
-#### Citizen Challenges
+- Reporting infrastructure issues takes too long
+- Users often need to choose categories manually
+- Reports vary wildly in clarity and detail
+- Smaller issues are often never submitted
 
-- Reporting infrastructure issues is time-consuming
-- Users must manually write detailed reports
-- Report quality is inconsistent
-- Minor issues often go unreported
+Agency-side pain points:
 
-#### Agency Challenges
+- Large report volumes still require manual review
+- Duplicate submissions waste maintenance resources
+- Urgency is difficult to assess consistently
+- Unstructured data makes prioritization harder
 
-- Large volumes of reports require manual review
-- Duplicate reports waste resources
-- Difficult to determine urgency
-- Lack of structured data for prioritization
+## Solution
 
+CivicLens reduces reporting friction to a simple flow:
 
-### Solution
+1. Upload a photo or video
+2. Enter a location
+3. Write a short description
+4. Submit
 
-CivicLens enables citizens to report infrastructure issues in under 30 seconds:
+The platform then turns that simple input into structured maintenance data:
 
-- Upload a photo or video
-- Select the location
-- Enter a short description (a sentence or a few words)
-- Submit
+- Detect likely issue type
+- Estimate severity
+- Score authenticity
+- Generate a professional maintenance report
+- Prioritize what should be addressed first
 
-The AI system will automatically:
+## Project Status
 
-- Detects infrastructure issues
-- Verifies report authenticity
-- Assesses severity
-- Generates professional maintenance reports
-- Detects duplicate reports
-- Prioritizes issues based on real-world impact
+The repository now includes the MVP skeleton for:
 
-The government is able to receive detailed reports and are able to assess and assign resources efficiently and adaquately without the compromise of simplicity in reporting.
+- Next.js App Router frontend
+- TailwindCSS-based UI
+- Landing page at `/`
+- Submit page at `/submit`
+- Dashboard page at `/dashboard`
+- Report details page at `/reports/[id]`
+- Shared navigation and reusable report components
+- Mock data for dashboard and details screens
+
+This base scaffold does not include real backend integration yet.
+
+## Getting Started
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Start the development server:
+
+```bash
+npm run dev
+```
+
+3. Open `http://localhost:3000`
+
+## Starter Structure
+
+```txt
+app/
+  dashboard/
+    page.tsx
+  reports/
+    [id]/
+      page.tsx
+  submit/
+    page.tsx
+  globals.css
+  layout.tsx
+  page.tsx
+components/
+  Navbar.tsx
+  ReportCard.tsx
+  ReportForm.tsx
+  SeverityBadge.tsx
+lib/
+  mockReports.ts
+```
+
+## Next Steps
+
+- Add real form handling
+- Introduce backend routes when the UI flow is stable
+- Connect persistent storage after the base experience feels right
