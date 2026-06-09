@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { SeverityBadge } from "@/components/SeverityBadge";
+import { SupabaseReportDetails } from "@/components/SupabaseReportDetails";
 import { getMockReportById } from "@/lib/mockReports";
 
 type ReportDetailsPageProps = {
@@ -16,7 +16,7 @@ export default async function ReportDetailsPage({
   const report = getMockReportById(id);
 
   if (!report) {
-    notFound();
+    return <SupabaseReportDetails reportId={id} />;
   }
 
   return (

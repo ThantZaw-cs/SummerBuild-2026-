@@ -1,6 +1,8 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { getSupabaseBrowserClient } from "@/lib/supabaseClient";
 
 const initialValues = {
   location: "",
@@ -8,9 +10,11 @@ const initialValues = {
 };
 
 export function ReportForm() {
+  const router = useRouter();
   const [values, setValues] = useState(initialValues);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [isError, setIsError] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -18,13 +22,49 @@ export function ReportForm() {
 
     setIsSubmitting(true);
     setMessage(null);
+    setIsError(false);
 
-    await new Promise((resolve) => setTimeout(resolve, 900));
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const {
+        data: { user },
+        error: userError
+      } = await supabase.auth.getUser();
 
-    setIsSubmitting(false);
-    setValues(initialValues);
-    form.reset();
-    setMessage("Report submitted successfully. This demo does not save data yet.");
+      if (userError || !user) {
+        throw new Error(
+          "You need to be signed in before submitting a report. Auth UI is not added yet."
+        );
+      }
+
+      const { data, error } = await supabase
+        .from("reports")
+        .insert({
+          user_id: user.id,
+          short_description: values.description,
+          location_text: values.location,
+          media_type: "image"
+        })
+        .select("id")
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      setValues(initialValues);
+      form.reset();
+      router.push(`/reports/${data.id}`);
+    } catch (error) {
+      setIsError(true);
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to submit report. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -109,12 +149,18 @@ export function ReportForm() {
             {isSubmitting ? "Submitting..." : "Submit report"}
           </button>
           <span className="text-sm text-ink/55">
-            {isSubmitting ? "Submitting mock report." : "No database connection yet."}
+            {isSubmitting ? "Saving report." : "Saved to Supabase when signed in."}
           </span>
         </div>
 
         {message ? (
-          <div className="rounded-lg border border-moss/20 bg-moss/10 px-4 py-3 text-sm text-moss">
+          <div
+            className={
+              isError
+                ? "rounded-lg border border-ember/20 bg-ember/10 px-4 py-3 text-sm text-ember"
+                : "rounded-lg border border-moss/20 bg-moss/10 px-4 py-3 text-sm text-moss"
+            }
+          >
             {message}
           </div>
         ) : null}

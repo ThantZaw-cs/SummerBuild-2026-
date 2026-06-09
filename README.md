@@ -48,6 +48,9 @@ The platform then turns that simple input into structured maintenance data:
 - Generate a professional maintenance report
 - Prioritize what should be addressed first
 
+## System Architecture
+![CivicLens System Architecture](docs/architecture.png)
+
 ## Project Status
 
 The repository now includes the MVP skeleton for:
