@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 const initialValues = {
-  locationText: "",
+  location: "",
   description: ""
 };
 
@@ -14,6 +14,8 @@ export function ReportForm() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
+
     setIsSubmitting(true);
     setMessage(null);
 
@@ -21,7 +23,8 @@ export function ReportForm() {
 
     setIsSubmitting(false);
     setValues(initialValues);
-    setMessage("Mock submission complete. This base scaffold does not save data yet.");
+    form.reset();
+    setMessage("Report submitted successfully. This demo does not save data yet.");
   }
 
   return (
@@ -32,15 +35,16 @@ export function ReportForm() {
             htmlFor="media"
             className="text-sm font-semibold text-ink"
           >
-            Photo or video
+            Image upload
           </label>
-          <div className="mt-2 rounded-[24px] border border-dashed border-ink/20 bg-tide/20 p-6">
+          <div className="mt-2 rounded-lg border border-dashed border-ink/20 bg-tide/20 p-6">
             <input
               id="media"
               name="media"
               type="file"
-              accept="image/*,video/*"
+              accept="image/*"
               className="block w-full text-sm text-ink/70 file:mr-4 file:rounded-full file:border-0 file:bg-ink file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-ink/90"
+              required
             />
             <p className="mt-3 text-sm text-ink/55">
               Placeholder upload only. Nothing is uploaded or saved yet.
@@ -50,24 +54,24 @@ export function ReportForm() {
 
         <div>
           <label
-            htmlFor="locationText"
+            htmlFor="location"
             className="text-sm font-semibold text-ink"
           >
             Location
           </label>
           <input
-            id="locationText"
-            name="locationText"
+            id="location"
+            name="location"
             type="text"
             placeholder="Block 123, Clementi Ave 3"
-            value={values.locationText}
+            value={values.location}
             onChange={(event) =>
               setValues((current) => ({
                 ...current,
-                locationText: event.target.value
+                location: event.target.value
               }))
             }
-            className="mt-2 w-full rounded-[20px] border border-ink/10 bg-white px-4 py-3 text-sm text-ink outline-none transition focus:border-ink/30"
+            className="mt-2 w-full rounded-lg border border-ink/10 bg-white px-4 py-3 text-sm text-ink outline-none transition focus:border-ink/30"
             required
           />
         </div>
@@ -91,7 +95,7 @@ export function ReportForm() {
                 description: event.target.value
               }))
             }
-            className="mt-2 w-full rounded-[20px] border border-ink/10 bg-white px-4 py-3 text-sm text-ink outline-none transition focus:border-ink/30"
+            className="mt-2 w-full rounded-lg border border-ink/10 bg-white px-4 py-3 text-sm text-ink outline-none transition focus:border-ink/30"
             required
           />
         </div>
@@ -105,12 +109,12 @@ export function ReportForm() {
             {isSubmitting ? "Submitting..." : "Submit report"}
           </button>
           <span className="text-sm text-ink/55">
-            {isSubmitting ? "Simulating a basic form flow." : "UI-only base form."}
+            {isSubmitting ? "Submitting mock report." : "No database connection yet."}
           </span>
         </div>
 
         {message ? (
-          <div className="rounded-[20px] border border-moss/20 bg-moss/10 px-4 py-3 text-sm text-moss">
+          <div className="rounded-lg border border-moss/20 bg-moss/10 px-4 py-3 text-sm text-moss">
             {message}
           </div>
         ) : null}

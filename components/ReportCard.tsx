@@ -14,7 +14,7 @@ export function ReportCard({ report }: ReportCardProps) {
           <div className="flex flex-wrap items-center gap-3">
             <SeverityBadge severity={report.severity} />
             <span className="text-xs uppercase tracking-[0.18em] text-ink/45">
-              {report.status.replace("_", " ")}
+              {report.status}
             </span>
             <span className="text-xs uppercase tracking-[0.18em] text-ink/45">
               {report.createdAt}
@@ -26,15 +26,15 @@ export function ReportCard({ report }: ReportCardProps) {
               {report.title}
             </h2>
             <p className="mt-2 max-w-3xl text-sm leading-7 text-ink/72">
-              {report.generatedReport}
+              {report.aiSummary}
             </p>
           </div>
         </div>
 
-        <div className="grid min-w-[220px] gap-3 rounded-[28px] bg-tide/50 p-4">
+        <div className="grid min-w-[220px] gap-3 rounded-lg bg-tide/50 p-4">
           <MetaRow label="Priority" value={`${report.priorityScore}/100`} />
           <MetaRow label="Authenticity" value={`${report.authenticityScore}/100`} />
-          <MetaRow label="Location" value={report.locationText} />
+          <MetaRow label="Location" value={report.location} />
         </div>
       </div>
 
@@ -46,7 +46,7 @@ export function ReportCard({ report }: ReportCardProps) {
           View details
         </Link>
         <Link
-          href="/submit"
+          href="/report/new"
           className="rounded-full border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-ink/30 hover:bg-ink/5"
         >
           Add another report

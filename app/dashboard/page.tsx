@@ -3,6 +3,13 @@ import { getSortedMockReports } from "@/lib/mockReports";
 
 export default function DashboardPage() {
   const reports = getSortedMockReports();
+  const highPriorityCount = reports.filter(
+    (report) => report.severity === "High" || report.severity === "Critical"
+  ).length;
+  const averageAuthenticity = Math.round(
+    reports.reduce((total, report) => total + report.authenticityScore, 0) /
+      reports.length
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -20,27 +27,25 @@ export default function DashboardPage() {
               experience before wiring in any real backend logic.
             </p>
           </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-[24px] border border-ink/10 bg-white px-4 py-3">
-              <p className="text-xs uppercase tracking-[0.18em] text-ink/50">
-                Sort
-              </p>
-              <p className="mt-2 text-sm font-medium text-ink">
-                Priority score: high to low
-              </p>
-            </div>
-            <div className="rounded-[24px] border border-ink/10 bg-white px-4 py-3">
-              <p className="text-xs uppercase tracking-[0.18em] text-ink/50">
-                Filter
-              </p>
-              <p className="mt-2 text-sm font-medium text-ink">
-                Severity filter placeholder
-              </p>
-            </div>
-          </div>
         </div>
       </section>
+
+      <section className="grid gap-4 md:grid-cols-3">
+        <SummaryCard label="Total reports" value={reports.length.toString()} />
+        <SummaryCard
+          label="High/Critical reports"
+          value={highPriorityCount.toString()}
+        />
+        <SummaryCard
+          label="Average authenticity"
+          value={`${averageAuthenticity}/100`}
+        />
+      </section>
+
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="text-xl font-semibold text-ink">Priority queue</h2>
+        <p className="text-sm text-ink/60">Sorted by priority score</p>
+      </div>
 
       <section className="grid gap-5">
         {reports.map((report) => (
@@ -48,5 +53,14 @@ export default function DashboardPage() {
         ))}
       </section>
     </div>
+  );
+}
+
+function SummaryCard({ label, value }: { label: string; value: string }) {
+  return (
+    <article className="panel px-6 py-5">
+      <p className="text-sm text-ink/60">{label}</p>
+      <p className="mt-3 text-3xl font-semibold text-ink">{value}</p>
+    </article>
   );
 }

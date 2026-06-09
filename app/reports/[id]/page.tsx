@@ -22,7 +22,13 @@ export default async function ReportDetailsPage({
   return (
     <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
       <section className="panel overflow-hidden">
-        <div className="h-72 bg-gradient-to-br from-tide via-white to-mist" />
+        <div className="h-72 bg-tide">
+          <img
+            src={report.imageUrl}
+            alt={report.title}
+            className="h-full w-full object-cover"
+          />
+        </div>
         <div className="px-6 py-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -32,7 +38,10 @@ export default async function ReportDetailsPage({
               <h1 className="mt-3 text-3xl font-semibold tracking-tight text-ink">
                 {report.title}
               </h1>
-              <p className="mt-3 text-sm leading-7 text-ink/72">
+              <p className="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-ink/45">
+                User description
+              </p>
+              <p className="mt-2 text-sm leading-7 text-ink/72">
                 {report.description}
               </p>
             </div>
@@ -40,8 +49,9 @@ export default async function ReportDetailsPage({
           </div>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
-            <DetailCard label="Location" value={report.locationText} />
             <DetailCard label="Issue type" value={report.issueType} />
+            <DetailCard label="Severity" value={report.severity} />
+            <DetailCard label="Location" value={report.location} />
             <DetailCard
               label="Authenticity score"
               value={`${report.authenticityScore}/100`}
@@ -62,17 +72,16 @@ export default async function ReportDetailsPage({
             AI-generated maintenance report
           </p>
           <p className="mt-4 text-sm leading-7 text-ink/75">
-            {report.generatedReport}
+            {report.aiSummary}
           </p>
         </section>
 
         <section className="panel px-6 py-6">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-moss">
-            Notes
+            Recommended action
           </p>
           <p className="mt-4 text-sm leading-7 text-ink/75">
-            This page is currently driven by local mock data and a placeholder
-            media panel so the base project stays focused on layout and flow.
+            {report.recommendedAction}
           </p>
           <Link
             href="/dashboard"
@@ -88,7 +97,7 @@ export default async function ReportDetailsPage({
 
 function DetailCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[24px] border border-ink/10 bg-white px-4 py-4">
+    <div className="rounded-lg border border-ink/10 bg-white px-4 py-4">
       <p className="text-xs uppercase tracking-[0.18em] text-ink/50">{label}</p>
       <p className="mt-2 text-sm font-medium capitalize text-ink">{value}</p>
     </div>

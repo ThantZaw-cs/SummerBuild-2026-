@@ -1,4 +1,5 @@
 import { clsx } from "clsx";
+import type { Severity } from "@/lib/mockReports";
 
 const severityStyles = {
   Low: "bg-moss/12 text-moss ring-moss/20",
@@ -8,7 +9,7 @@ const severityStyles = {
 } as const;
 
 type SeverityBadgeProps = {
-  severity: keyof typeof severityStyles;
+  severity: Severity;
 };
 
 export function SeverityBadge({ severity }: SeverityBadgeProps) {
