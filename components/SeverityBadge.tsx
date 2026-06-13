@@ -2,24 +2,41 @@ import { clsx } from "clsx";
 import type { Severity } from "@/lib/mockReports";
 
 const severityStyles = {
-  Low: "bg-moss/12 text-moss ring-moss/20",
-  Medium: "bg-gold/14 text-amber-700 ring-amber-300/40",
-  High: "bg-ember/12 text-ember ring-ember/20",
-  Critical: "bg-red-100 text-red-700 ring-red-200"
+  Low: {
+    wrapper: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    dot: "bg-emerald-500"
+  },
+  Medium: {
+    wrapper: "bg-amber-50 text-amber-700 border-amber-200",
+    dot: "bg-amber-500"
+  },
+  High: {
+    wrapper: "bg-orange-50 text-orange-700 border-orange-200",
+    dot: "bg-orange-500"
+  },
+  Critical: {
+    wrapper: "bg-red-50 text-red-700 border-red-200",
+    dot: "bg-red-500"
+  }
 } as const;
 
 type SeverityBadgeProps = {
   severity: Severity;
+  size?: "sm" | "md";
 };
 
-export function SeverityBadge({ severity }: SeverityBadgeProps) {
+export function SeverityBadge({ severity, size = "sm" }: SeverityBadgeProps) {
+  const sizeClasses = size === "sm" ? "px-2 py-0.5 text-xs" : "px-3 py-1 text-sm";
+
   return (
     <span
       className={clsx(
-        "inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ring-1",
-        severityStyles[severity]
+        "inline-flex items-center gap-1.5 rounded-full border font-medium",
+        severityStyles[severity].wrapper,
+        sizeClasses
       )}
     >
+      <span className={clsx("h-1.5 w-1.5 rounded-full", severityStyles[severity].dot)} />
       {severity}
     </span>
   );
