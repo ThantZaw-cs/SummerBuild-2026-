@@ -1,390 +1,208 @@
-"use client";
-
 import Link from "next/link";
-import { motion } from "framer-motion";
 import {
-  AlertTriangle,
   ArrowRight,
   BarChart3,
   Camera,
-  CheckCircle,
+  CheckCircle2,
+  ClipboardCheck,
   Copy,
   FileCheck,
   Gauge,
+  Map as MapIcon,
   MapPin,
+  Radio,
   ScanSearch,
   ShieldCheck,
+  Sparkles,
   Target,
-  TrendingUp,
-  Zap
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { sortByPriority, reports, severityStyles } from "@/lib/data";
 
 const steps = [
-  {
-    step: "1",
-    icon: Camera,
-    title: "Upload Photo or Video",
-    desc: "Snap a quick photo of the infrastructure issue"
-  },
-  {
-    step: "2",
-    icon: MapPin,
-    title: "Select Location",
-    desc: "Pin the exact spot on the map or use GPS"
-  },
-  {
-    step: "3",
-    icon: Zap,
-    title: "AI Generates Report",
-    desc: "Get a full maintenance report in seconds"
-  }
+  { n: "1", icon: Camera, title: "Snap a photo", desc: "Capture the pothole, the dead streetlight, the flooded drain — whatever you see." },
+  { n: "2", icon: MapPin, title: "Drop a pin", desc: "Pin the exact spot on the map or let GPS place it for you automatically." },
+  { n: "3", icon: Sparkles, title: "We do the rest", desc: "CivicLens classifies, scores, de-duplicates and routes it to the right agency." },
 ];
 
 const features = [
-  {
-    icon: ScanSearch,
-    title: "Issue Detection",
-    description:
-      "AI automatically identifies the type of infrastructure issue from your photo."
-  },
-  {
-    icon: ShieldCheck,
-    title: "Authenticity Verification",
-    description:
-      "Each report is scored for authenticity to prevent false or duplicate submissions."
-  },
-  {
-    icon: Gauge,
-    title: "Severity Assessment",
-    description:
-      "AI evaluates how severe the issue is and whether immediate action is needed."
-  },
-  {
-    icon: Copy,
-    title: "Duplicate Detection",
-    description:
-      "Automatically detects if the same issue has been reported nearby by others."
-  },
-  {
-    icon: Target,
-    title: "Priority Scoring",
-    description:
-      "Every report gets a priority score so agencies can focus on what matters most."
-  },
-  {
-    icon: FileCheck,
-    title: "Agency-Ready Reports",
-    description:
-      "AI generates structured, professional reports that agencies can act on immediately."
-  }
+  { icon: ScanSearch, title: "Issue detection", desc: "Identifies the type of infrastructure issue straight from the photo you upload." },
+  { icon: ShieldCheck, title: "Authenticity scoring", desc: "Every report gets an authenticity score to filter out false or spam submissions." },
+  { icon: Gauge, title: "Severity assessment", desc: "Grades how serious the issue is and whether it needs immediate action." },
+  { icon: Copy, title: "Duplicate detection", desc: "Spots when the same issue has already been reported nearby and merges it." },
+  { icon: Target, title: "Priority scoring", desc: "Ranks every report so agencies always work the highest-impact issues first." },
+  { icon: FileCheck, title: "Agency-ready reports", desc: "Generates a structured maintenance ticket teams can act on immediately." },
+];
+
+const statCards = [
+  { label: "Total reports", value: "1,247", icon: BarChart3, color: "bg-primary-soft text-primary" },
+  { label: "Critical", value: "23", icon: ClipboardCheck, color: "bg-red-50 text-red-600" },
+  { label: "In progress", value: "156", icon: Gauge, color: "bg-amber-50 text-amber-600" },
+  { label: "Resolved", value: "891", icon: CheckCircle2, color: "bg-emerald-50 text-emerald-600" },
 ];
 
 export default function HomePage() {
+  const preview = sortByPriority(reports).slice(0, 3);
+
   return (
     <>
-      <section className="relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent" />
-        <div className="mx-auto max-w-7xl px-4 pb-20 pt-16 sm:px-6 sm:pb-28 sm:pt-24 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="mx-auto max-w-3xl text-center"
-          >
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary">
-              <Zap className="h-3.5 w-3.5" />
-              SummerBuild 2026 / AI-Powered
-            </div>
+      {/* Hero */}
+      <section className="bg-gradient-to-b from-[#FCF6F1] to-canvas">
+        <div className="mx-auto max-w-6xl px-6 pb-10 pt-[72px] text-center">
+          <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#F0D7C3] bg-primary-soft px-3.5 py-1.5 text-[12.5px] font-semibold text-primary-dark">
+            <Radio className="h-3.5 w-3.5" />
+            Built for cities · SummerBuild 2026
+          </span>
+          <h1 className="mx-auto max-w-[880px] text-[clamp(40px,6vw,66px)] font-extrabold leading-[1.04] tracking-tight text-ink">
+            Report civic issues in{" "}
+            <span className="text-primary">under 30 seconds</span>
+          </h1>
+          <p className="mx-auto mt-6 max-w-[640px] text-lg leading-relaxed text-slate-500 sm:text-xl">
+            Snap a photo, drop a pin, write one sentence. CivicLens turns a simple
+            citizen report into a structured, agency-ready maintenance ticket —
+            routed, scored, and ready to act on.
+          </p>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <Link href="/report" className="inline-flex items-center gap-2 rounded-xl bg-primary px-7 py-3.5 text-base font-semibold text-white shadow-lg shadow-primary/30 transition-colors hover:bg-primary-dark">
+              Report an Issue <ArrowRight className="h-[18px] w-[18px]" />
+            </Link>
+            <Link href="/dashboard" className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-7 py-3.5 text-base font-semibold text-ink transition-colors hover:bg-slate-100">
+              <BarChart3 className="h-[18px] w-[18px]" /> View Dashboard
+            </Link>
+          </div>
+          <div className="mt-9 flex flex-wrap justify-center gap-7 text-sm font-medium text-slate-500">
+            {["1,247 reports filed", "891 resolved", "2.3 day avg resolution"].map((t) => (
+              <span key={t} className="inline-flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-accent" />
+                {t}
+              </span>
+            ))}
+          </div>
 
-            <h1 className="font-heading text-4xl font-extrabold leading-[1.1] tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-              Report civic issues{" "}
-              <span className="text-primary">in under 30 seconds</span>
-            </h1>
-
-            <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
-              Snap a photo, drop a pin, write one sentence. Our AI turns your
-              simple citizen report into a structured maintenance report - ready
-              for agencies to act on.
-            </p>
-
-            <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Link href="/report">
-                <Button
-                  size="lg"
-                  className="h-12 bg-primary px-8 text-base text-white shadow-lg shadow-primary/20 hover:bg-primary/90"
-                >
-                  Report an Issue
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-              <Link href="/dashboard">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="h-12 border-border px-8 text-base"
-                >
-                  <BarChart3 className="mr-2 h-4 w-4" />
-                  View Dashboard
-                </Button>
-              </Link>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="mx-auto mt-20 max-w-4xl"
-          >
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              {steps.map((item) => {
-                const Icon = item.icon;
-
-                return (
-                  <div
-                    key={item.step}
-                    className="group relative rounded-xl border border-border bg-white p-6 text-center transition-all duration-300 hover:border-primary/20 hover:shadow-md"
-                  >
-                    <div className="absolute -top-3 left-1/2 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">
-                      {item.step}
-                    </div>
-                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 transition-colors group-hover:bg-primary/15">
-                      <Icon className="h-5 w-5 text-primary" />
-                    </div>
-                    <h3 className="mb-1.5 font-heading font-semibold text-foreground">
-                      {item.title}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">{item.desc}</p>
-                  </div>
-                );
-              })}
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      <section className="bg-white py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="mx-auto mb-14 max-w-2xl text-center"
-          >
-            <p className="mb-2 text-sm font-medium text-primary">
-              AI-Powered Analysis
-            </p>
-            <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Smarter infrastructure reporting
-            </h2>
-            <p className="mt-4 text-lg text-muted-foreground">
-              Every report is analyzed by AI to extract actionable insights for
-              maintenance agencies.
-            </p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {features.map((feature) => {
-              const Icon = feature.icon;
-
+          {/* Steps */}
+          <div className="mx-auto mt-14 grid max-w-[920px] grid-cols-1 gap-4 text-left sm:grid-cols-3">
+            {steps.map((s) => {
+              const Icon = s.icon;
               return (
-                <motion.div
-                  key={feature.title}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: features.indexOf(feature) * 0.08 }}
-                  className="group rounded-xl border border-border bg-background p-6 transition-all duration-300 hover:border-primary/20 hover:shadow-md"
-                >
-                  <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/15">
-                    <Icon className="h-5 w-5 text-primary" />
-                  </div>
-                  <h3 className="mb-2 font-heading font-semibold text-foreground">
-                    {feature.title}
-                  </h3>
-                  <p className="text-sm leading-relaxed text-muted-foreground">
-                    {feature.description}
-                  </p>
-                </motion.div>
+                <div key={s.n} className="relative rounded-2xl border border-line bg-white p-7 shadow-sm">
+                  <span className="absolute -top-3 left-6 flex h-[26px] w-[26px] items-center justify-center rounded-full bg-ink text-[13px] font-bold text-white">
+                    {s.n}
+                  </span>
+                  <span className="mb-4 flex h-[46px] w-[46px] items-center justify-center rounded-xl bg-primary-soft text-primary">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <h3 className="text-[17px] font-bold text-ink">{s.title}</h3>
+                  <p className="mt-1.5 text-[14.5px] leading-relaxed text-slate-500">{s.desc}</p>
+                </div>
               );
             })}
           </div>
         </div>
       </section>
 
-      <section className="bg-background py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="mx-auto mb-14 max-w-2xl text-center"
-          >
-            <p className="mb-2 text-sm font-medium text-primary">
-              Agency Dashboard
-            </p>
-            <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Real-time visibility for agencies
+      {/* Features */}
+      <section className="border-y border-line bg-white">
+        <div className="mx-auto max-w-6xl px-6 py-[76px]">
+          <div className="max-w-[620px]">
+            <p className="mb-2.5 text-[13px] font-bold uppercase tracking-[0.12em] text-primary">Under the hood</p>
+            <h2 className="text-[clamp(28px,4vw,40px)] font-extrabold leading-tight tracking-tight text-ink">
+              Smarter triage from the very first photo
             </h2>
-            <p className="mt-4 text-lg text-muted-foreground">
-              Agencies get a centralized dashboard to view, filter, and
-              prioritize all citizen reports.
+            <p className="mt-4 text-[17px] leading-relaxed text-slate-500">
+              Every report is analyzed the moment it lands — so agencies open a
+              clean, prioritized queue instead of a flood of raw tips.
             </p>
-          </motion.div>
+          </div>
+          <div className="mt-11 grid grid-cols-1 gap-[18px] sm:grid-cols-2 lg:grid-cols-3">
+            {features.map((f) => {
+              const Icon = f.icon;
+              return (
+                <div key={f.title} className="rounded-2xl border border-line bg-[#FBFCFD] p-[26px] transition-colors hover:border-[#D7C3B4] hover:bg-white">
+                  <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-ink">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <h3 className="text-[16.5px] font-bold text-ink">{f.title}</h3>
+                  <p className="mt-1.5 text-[14.5px] leading-relaxed text-slate-500">{f.desc}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
 
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="overflow-hidden rounded-2xl border border-border bg-white shadow-lg"
-          >
-            <div className="flex items-center gap-2 border-b border-border p-4">
-              <div className="flex gap-1.5">
-                <div className="h-3 w-3 rounded-full bg-red-400" />
-                <div className="h-3 w-3 rounded-full bg-amber-400" />
-                <div className="h-3 w-3 rounded-full bg-emerald-400" />
-              </div>
-              <span className="ml-2 text-xs text-muted-foreground">
-                CivicLens Agency Dashboard
-              </span>
+      {/* Dashboard preview */}
+      <section className="bg-canvas">
+        <div className="mx-auto max-w-6xl px-6 py-[76px]">
+          <div className="mx-auto mb-10 max-w-[600px] text-center">
+            <p className="mb-2.5 text-[13px] font-bold uppercase tracking-[0.12em] text-primary">Agency dashboard</p>
+            <h2 className="text-[clamp(28px,4vw,40px)] font-extrabold leading-tight tracking-tight text-ink">
+              One queue. Ranked by what matters.
+            </h2>
+          </div>
+          <div className="overflow-hidden rounded-[18px] border border-line bg-white shadow-2xl shadow-slate-300/40">
+            <div className="flex items-center gap-2.5 border-b border-line bg-[#FBFCFD] px-[18px] py-3">
+              <span className="h-[11px] w-[11px] rounded-full bg-red-400" />
+              <span className="h-[11px] w-[11px] rounded-full bg-amber-400" />
+              <span className="h-[11px] w-[11px] rounded-full bg-emerald-400" />
+              <span className="ml-2 text-[12.5px] font-medium text-slate-400">civiclens.gov · Agency Dashboard</span>
             </div>
-            <div className="p-6 sm:p-8">
-              <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-                {[
-                  {
-                    label: "Total Reports",
-                    value: "1,247",
-                    icon: BarChart3,
-                    color: "text-primary bg-primary/10"
-                  },
-                  {
-                    label: "Critical Issues",
-                    value: "23",
-                    icon: AlertTriangle,
-                    color: "text-red-600 bg-red-50"
-                  },
-                  {
-                    label: "In Progress",
-                    value: "156",
-                    icon: TrendingUp,
-                    color: "text-amber-600 bg-amber-50"
-                  },
-                  {
-                    label: "Resolved",
-                    value: "891",
-                    icon: CheckCircle,
-                    color: "text-emerald-600 bg-emerald-50"
-                  }
-                ].map((stat) => {
-                  const Icon = stat.icon;
-
+            <div className="p-[26px]">
+              <div className="mb-[22px] grid grid-cols-2 gap-3.5 lg:grid-cols-4">
+                {statCards.map((c) => {
+                  const Icon = c.icon;
                   return (
-                    <div
-                      key={stat.label}
-                      className="rounded-xl border border-border bg-background p-4"
-                    >
-                      <div
-                        className={`mb-3 flex h-8 w-8 items-center justify-center rounded-lg ${stat.color}`}
-                      >
+                    <div key={c.label} className="rounded-[13px] border border-line bg-[#FBFCFD] p-4">
+                      <span className={`mb-3 flex h-8 w-8 items-center justify-center rounded-[9px] ${c.color}`}>
                         <Icon className="h-4 w-4" />
-                      </div>
-                      <p className="text-2xl font-bold text-foreground">
-                        {stat.value}
-                      </p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {stat.label}
-                      </p>
+                      </span>
+                      <div className="text-2xl font-extrabold tracking-tight text-ink">{c.value}</div>
+                      <div className="mt-0.5 text-[12.5px] text-slate-500">{c.label}</div>
                     </div>
                   );
                 })}
               </div>
-
-              <div className="space-y-3">
-                {[
-                  ["Road Damage", "Orchard Road", "Critical", 96],
-                  ["Drainage Issue", "Clementi Ave 1", "High", 85],
-                  ["Lighting Failure", "Bishan Park", "Medium", 71]
-                ].map(([type, location, severity, score]) => (
-                  <div
-                    key={String(type)}
-                    className="flex items-center justify-between rounded-lg border border-border bg-background px-4 py-3"
-                  >
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm font-medium text-foreground">
-                        {type}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {location}
-                      </span>
+              <div className="flex flex-col gap-2.5">
+                {preview.map((r) => (
+                  <Link key={r.id} href={`/reports/${r.id}`} className="flex items-center justify-between gap-4 rounded-[11px] border border-line bg-white px-4 py-3 transition-colors hover:border-slate-300 hover:bg-[#FBFCFD]">
+                    <div className="flex min-w-0 items-center gap-3.5">
+                      <span className={`h-2.5 w-2.5 flex-none rounded-full ${severityStyles[r.severity].dot}`} />
+                      <span className="whitespace-nowrap text-[14.5px] font-semibold text-ink">{r.issueType}</span>
+                      <span className="truncate text-[13px] text-slate-400">{r.location}</span>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                          severity === "Critical"
-                            ? "bg-red-50 text-red-700"
-                            : severity === "High"
-                              ? "bg-orange-50 text-orange-700"
-                              : "bg-amber-50 text-amber-700"
-                        }`}
-                      >
-                        {severity}
-                      </span>
-                      <span className="text-sm font-bold text-foreground">
-                        {score}
-                      </span>
+                    <div className="flex flex-none items-center gap-3.5">
+                      <span className={`rounded-full px-2.5 py-0.5 text-[11.5px] font-bold ring-1 ring-inset ${severityStyles[r.severity].badge}`}>{r.severity}</span>
+                      <span className="w-[30px] text-right text-[15px] font-extrabold text-ink">{r.priority}</span>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
       </section>
 
-      <section className="bg-white py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="relative overflow-hidden rounded-2xl bg-foreground p-10 text-center sm:p-14"
-          >
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent" />
+      {/* Final CTA */}
+      <section className="border-t border-line bg-white">
+        <div className="mx-auto max-w-6xl px-6 py-[76px]">
+          <div className="relative overflow-hidden rounded-[22px] bg-ink px-10 py-14 text-center">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_280px_at_50%_-40%,rgba(195,96,34,0.22),transparent)]" />
             <div className="relative">
-              <h2 className="font-heading text-2xl font-bold tracking-tight text-white sm:text-3xl">
-                Make your city better, one report at a time
+              <h2 className="text-[clamp(26px,3.6vw,38px)] font-extrabold leading-tight tracking-tight text-white">
+                Make your city work better — one report at a time
               </h2>
-              <p className="mx-auto mt-4 max-w-xl text-lg text-white/70">
-                Join thousands of citizens who are using CivicLens to improve
-                public infrastructure.
+              <p className="mx-auto mt-4 max-w-[540px] text-[17px] leading-relaxed text-white/70">
+                Spot a pothole, a dead streetlight, a fallen tree? It takes 30
+                seconds to put it in front of the people who can fix it.
               </p>
-              <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                <Link href="/report">
-                  <Button
-                    size="lg"
-                    className="h-12 bg-white px-8 text-base text-foreground shadow-lg hover:bg-white/90"
-                  >
-                    Start Reporting
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
+              <div className="mt-7 flex flex-wrap justify-center gap-3">
+                <Link href="/report" className="inline-flex items-center gap-2 rounded-xl bg-primary px-7 py-3.5 text-base font-semibold text-white transition-colors hover:bg-primary-dark">
+                  Start a Report <ArrowRight className="h-[18px] w-[18px]" />
                 </Link>
-                <Link href="/dashboard">
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="h-12 border-white/20 px-8 text-base text-white hover:bg-white/10"
-                  >
-                    Explore Dashboard
-                  </Button>
+                <Link href="/map" className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-7 py-3.5 text-base font-semibold text-white transition-colors hover:bg-white/15">
+                  <MapIcon className="h-[18px] w-[18px]" /> Explore the Map
                 </Link>
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
       </section>
     </>

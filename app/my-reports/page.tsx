@@ -1,148 +1,125 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { format } from "date-fns";
-import { motion } from "framer-motion";
-import { ExternalLink, FileText, MapPin, PlusCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { SeverityBadge } from "@/components/SeverityBadge";
-import { StatusBadge } from "@/components/StatusBadge";
-import { sampleReports, type CivicReport } from "@/lib/mockReports";
-import { loadMyReportsFromSupabase } from "@/lib/reportQueries";
+import { ChevronRight, MapPin, Plus } from "lucide-react";
+import {
+  formatDate,
+  getReport,
+  type CivicReport,
+  type Status,
+} from "@/lib/data";
+import { StatusBadge } from "@/components/Badges";
+
+// Reports this citizen has submitted (subset of the sample data).
+const MY_IDS = ["RPT-2026-006", "RPT-2026-002", "RPT-2026-001", "RPT-2026-005"];
+
+const STAGES = ["Submitted", "Reviewed", "In progress", "Resolved"];
+const statusStage: Record<Status, number> = {
+  "Pending Review": 0,
+  Verified: 1,
+  "In Progress": 2,
+  Resolved: 3,
+  Rejected: 0,
+};
 
 export default function MyReportsPage() {
-  const [reports, setReports] = useState<CivicReport[]>(sampleReports.slice(0, 4));
-
-  useEffect(() => {
-    let isActive = true;
-
-    loadMyReportsFromSupabase().then((loadedReports) => {
-      if (isActive) {
-        setReports(loadedReports);
-      }
-    });
-
-    return () => {
-      isActive = false;
-    };
-  }, []);
+  const mine = MY_IDS.map((id) => getReport(id)).filter(Boolean) as CivicReport[];
+  const active = mine.filter((r) => r.status !== "Resolved").length;
+  const resolved = mine.filter((r) => r.status === "Resolved").length;
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-      >
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="font-heading text-2xl font-bold text-foreground sm:text-3xl">
-              My Reports
-            </h1>
-            <p className="mt-1 text-muted-foreground">
-              Track the status of your submitted reports.
-            </p>
-          </div>
-          <Link href="/report">
-            <Button className="bg-primary text-white hover:bg-primary/90" size="sm">
-              <PlusCircle className="mr-1.5 h-4 w-4" />
-              New Report
-            </Button>
-          </Link>
+    <div className="mx-auto max-w-3xl px-6 pb-20 pt-9">
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3.5">
+        <div>
+          <h1 className="text-[28px] font-extrabold tracking-tight text-ink">My reports</h1>
+          <p className="mt-1.5 text-[15px] text-slate-500">
+            <span className="font-semibold text-ink">{active} active</span> ·{" "}
+            {resolved} resolved · {mine.length} total
+          </p>
         </div>
+        <Link
+          href="/report"
+          className="inline-flex items-center gap-2 rounded-[10px] bg-primary px-[18px] py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
+        >
+          <Plus className="h-4 w-4" /> New report
+        </Link>
+      </div>
 
-        {reports.length > 0 ? (
-          <div className="space-y-4">
-            {reports.map((report) => (
-              <motion.div
-                key={report.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: reports.indexOf(report) * 0.05 }}
-              >
-                <Card className="border-border shadow-sm transition-shadow hover:shadow-md">
-                  <CardContent className="p-0">
-                  <div className="flex flex-col sm:flex-row">
-                    <div className="h-32 sm:h-auto sm:w-40">
-                      {report.mediaType === "video" ? (
-                        <video
-                          src={report.mediaUrl}
-                          className="h-full w-full object-cover sm:rounded-l-xl"
-                        />
-                      ) : (
-                        <img
-                          src={report.mediaUrl}
-                          alt={report.title}
-                          className="h-full w-full object-cover sm:rounded-l-xl"
-                        />
-                      )}
+      <div className="flex flex-col gap-4">
+        {mine.map((r) => {
+          const reached = statusStage[r.status];
+          return (
+            <div key={r.id} className="flex items-stretch gap-[18px] rounded-2xl border border-line bg-white p-4 shadow-sm">
+              {/* Thumbnail (placeholder behind, image on top) */}
+              <div className="relative min-h-[120px] w-[150px] flex-none overflow-hidden rounded-xl bg-[repeating-linear-gradient(135deg,#E4EAF0,#E4EAF0_9px,#EBF0F5_9px,#EBF0F5_18px)]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={r.media}
+                  alt={r.title}
+                  className="relative h-full w-full object-cover"
+                />
+              </div>
+
+              <div className="flex min-w-0 flex-1 flex-col">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="mb-1 flex items-center gap-2.5">
+                      <span className="font-mono text-xs text-slate-400">{r.id}</span>
+                      <StatusBadge status={r.status} />
                     </div>
-                    <div className="flex-1 p-5">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-xs font-medium text-muted-foreground">
-                              {report.id}
-                            </p>
-                            <StatusBadge status={report.status} />
-                          </div>
-                          <h3 className="mt-1 font-semibold text-foreground">
-                            {report.title}
-                          </h3>
-                          <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <MapPin className="h-3 w-3 shrink-0" />
-                            <span className="truncate">{report.location}</span>
-                          </div>
-                        </div>
-                        <Link href={`/report/${report.id}`}>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="shrink-0 text-primary"
-                            aria-label={`Open ${report.title}`}
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </Button>
-                        </Link>
-                      </div>
-                      <div className="mt-3 flex items-center gap-3 border-t border-border pt-3">
-                        <SeverityBadge severity={report.severity} />
-                        <span className="text-xs text-muted-foreground">
-                          {report.issueType}
-                        </span>
-                        <span className="ml-auto text-xs text-muted-foreground">
-                          {format(new Date(report.submittedAt), "MMM d, yyyy")}
-                        </span>
-                      </div>
-                    </div>
+                    <h3 className="truncate text-[16.5px] font-bold text-ink">{r.title}</h3>
+                    <p className="mt-1 flex items-center gap-1.5 text-[13px] text-slate-400">
+                      <MapPin className="h-3.5 w-3.5" />
+                      {r.location} · {formatDate(r.at)}
+                    </p>
                   </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        ) : (
-          <Card className="border-border shadow-sm">
-            <CardContent className="py-16 text-center">
-              <FileText className="mx-auto mb-4 h-12 w-12 text-muted-foreground/40" />
-              <h3 className="mb-1 font-heading font-semibold text-foreground">
-                No reports yet
-              </h3>
-              <p className="mb-4 text-sm text-muted-foreground">
-                Submit your first infrastructure report to help your community.
-              </p>
-              <Link href="/report">
-                <Button className="bg-primary text-white hover:bg-primary/90">
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Report an Issue
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        )}
-      </motion.div>
+                  <Link
+                    href={`/reports/${r.id}`}
+                    className="inline-flex flex-none items-center gap-1.5 rounded-[9px] border border-slate-300 bg-white px-3 py-2 text-[13px] font-semibold text-ink transition-colors hover:bg-slate-100"
+                  >
+                    View <ChevronRight className="h-[15px] w-[15px]" />
+                  </Link>
+                </div>
+
+                {/* Stage tracker */}
+                <div className="mt-auto flex items-start pt-[18px]">
+                  {STAGES.map((name, i) => {
+                    const done = i <= reached;
+                    const isLast = i === STAGES.length - 1;
+                    return (
+                      <div key={name} className="flex flex-1 items-start last:flex-none">
+                        <div className="flex flex-none flex-col items-center">
+                          <span
+                            className={`h-[13px] w-[13px] rounded-full border-2 ${
+                              i < reached
+                                ? "border-accent bg-accent"
+                                : i === reached
+                                  ? "border-accent bg-white shadow-[0_0_0_3px_#D6F2EC]"
+                                  : "border-slate-300 bg-white"
+                            }`}
+                          />
+                          <span
+                            className={`mt-1.5 whitespace-nowrap text-[11px] font-semibold ${
+                              done ? "text-accent" : "text-slate-400"
+                            }`}
+                          >
+                            {name}
+                          </span>
+                        </div>
+                        {!isLast && (
+                          <span
+                            className={`mx-1 mt-[5px] h-0.5 flex-1 ${
+                              i < reached ? "bg-accent" : "bg-slate-200"
+                            }`}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

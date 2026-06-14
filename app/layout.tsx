@@ -4,23 +4,22 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 
 export const metadata: Metadata = {
-  title: "CivicLens",
-  description: "AI-powered civic infrastructure reporting platform."
+  title: "CivicLens — Civic infrastructure reporting",
+  description:
+    "Report civic issues in under 30 seconds. CivicLens turns a simple citizen report into a structured, agency-ready maintenance ticket.",
 };
 
 export default function RootLayout({
-  children
-}: Readonly<{
+  children,
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
-      <body>
-        <div className="page-shell">
-          <Navbar />
-          <main>{children}</main>
-          <Footer />
-        </div>
+      <body className="flex min-h-screen flex-col">
+        <Navbar />
+        <main className="flex-1">{children}</main>
+        <Footer />
       </body>
     </html>
   );

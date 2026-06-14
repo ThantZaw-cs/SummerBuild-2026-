@@ -1,254 +1,139 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { ArrowRight, Eye, EyeOff, Lock, Mail, Shield, User } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { getSupabaseBrowserClient } from "@/lib/supabaseClient";
+import { useRouter } from "next/navigation";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Lock,
+  Mail,
+  Shield,
+  User,
+} from "lucide-react";
 
 export default function LoginPage() {
-  const [tab, setTab] = useState<"login" | "signup">("login");
-  const [showPassword, setShowPassword] = useState(false);
-  const [loginEmail, setLoginEmail] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
-  const [signupName, setSignupName] = useState("");
-  const [signupEmail, setSignupEmail] = useState("");
-  const [signupPassword, setSignupPassword] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
+  const router = useRouter();
+  const [mode, setMode] = useState<"login" | "signup">("login");
+  const isSignup = mode === "signup";
 
-  async function handleLogin() {
-    setMessage(null);
-
-    try {
-      const supabase = getSupabaseBrowserClient();
-      const { error } = await supabase.auth.signInWithPassword({
-        email: loginEmail,
-        password: loginPassword
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      window.location.href = "/dashboard";
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Login failed.");
-    }
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    // Prototype: no real auth — send agency users to the dashboard.
+    router.push("/dashboard");
   }
 
-  async function handleSignup() {
-    setMessage(null);
-
-    try {
-      const supabase = getSupabaseBrowserClient();
-      const { data, error } = await supabase.auth.signUp({
-        email: signupEmail,
-        password: signupPassword,
-        options: {
-          data: {
-            full_name: signupName
-          }
-        }
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      if (data.user) {
-        await supabase.from("profiles").upsert({
-          id: data.user.id,
-          full_name: signupName || signupEmail,
-          role: "citizen"
-        });
-      }
-
-      setMessage("Account created. Check your email if confirmation is enabled.");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Signup failed.");
-    }
-  }
+  const tab = (active: boolean) =>
+    `flex-1 rounded-lg py-2.5 text-[13.5px] font-semibold transition ${
+      active ? "bg-white text-ink shadow-sm" : "text-slate-500"
+    }`;
 
   return (
-    <div className="flex min-h-[calc(100vh-128px)] items-center justify-center px-4 py-12">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="w-full max-w-md"
-      >
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
-            <Shield className="h-6 w-6 text-white" />
+    <div className="mx-auto max-w-4xl px-6 pb-20 pt-12">
+      <div className="grid min-h-[520px] overflow-hidden rounded-[20px] border border-line bg-white shadow-2xl shadow-slate-300/40 md:grid-cols-2">
+        {/* Brand panel */}
+        <div className="relative flex flex-col justify-between overflow-hidden bg-ink p-10">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(600px_240px_at_20%_0%,rgba(195,96,34,0.28),transparent)]" />
+          <div className="relative flex items-center gap-2.5">
+            <span className="flex h-[34px] w-[34px] items-center justify-center rounded-[9px] bg-primary text-white">
+              <Shield className="h-[18px] w-[18px]" />
+            </span>
+            <span className="text-[19px] font-extrabold text-white">CivicLens</span>
           </div>
-          <h1 className="font-heading text-2xl font-bold text-foreground">
-            CivicLens
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            AI-Powered Civic Infrastructure Reporting
-          </p>
+          <div className="relative">
+            <h2 className="text-[26px] font-extrabold leading-tight tracking-tight text-white">
+              Your city, in better repair.
+            </h2>
+            <p className="mt-3.5 text-[15px] leading-relaxed text-white/70">
+              Every report you file is triaged, scored and routed to the agency
+              that can fix it.
+            </p>
+            <div className="mt-6 flex flex-col gap-3">
+              {[
+                "Report in under 30 seconds",
+                "Track every report to resolution",
+                "Free for every resident",
+              ].map((t) => (
+                <span key={t} className="flex items-center gap-2.5 text-sm text-white/85">
+                  <CheckCircle2 className="h-[17px] w-[17px] text-[#5BBEAE]" />
+                  {t}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="relative text-[12.5px] text-white/50">
+            SummerBuild 2026 · civiclens.gov
+          </div>
         </div>
 
-        <Card className="border-border shadow-lg">
-          <CardContent className="p-6">
-            <div className="mb-6 grid w-full grid-cols-2 rounded-lg bg-muted p-1">
-              <button
-                onClick={() => setTab("login")}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
-                  tab === "login"
-                    ? "bg-white text-foreground shadow-sm"
-                    : "text-muted-foreground"
-                }`}
-              >
-                Login
-              </button>
-              <button
-                onClick={() => setTab("signup")}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
-                  tab === "signup"
-                    ? "bg-white text-foreground shadow-sm"
-                    : "text-muted-foreground"
-                }`}
-              >
-                Sign Up
-              </button>
-            </div>
+        {/* Form */}
+        <div className="flex flex-col justify-center px-9 py-10">
+          <div className="mb-6 flex gap-1 rounded-xl bg-slate-100 p-1">
+            <button onClick={() => setMode("login")} className={tab(!isSignup)}>Sign in</button>
+            <button onClick={() => setMode("signup")} className={tab(isSignup)}>Create account</button>
+          </div>
+          <h1 className="text-[23px] font-extrabold tracking-tight text-ink">
+            {isSignup ? "Create your account" : "Welcome back"}
+          </h1>
+          <p className="mb-5 mt-1.5 text-sm text-slate-500">
+            {isSignup
+              ? "Report issues, track progress, and help improve your city."
+              : "Sign in to file reports and track their progress."}
+          </p>
 
-            {tab === "login" ? (
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="login-email" className="text-sm font-medium">
-                    Email
-                  </Label>
-                  <div className="relative mt-1.5">
-                    <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      id="login-email"
-                      type="email"
-                      placeholder="you@example.com"
-                      value={loginEmail}
-                      onChange={(event) => setLoginEmail(event.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="login-password" className="text-sm font-medium">
-                    Password
-                  </Label>
-                  <div className="relative mt-1.5">
-                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      id="login-password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Enter password"
-                      value={loginPassword}
-                      onChange={(event) => setLoginPassword(event.target.value)}
-                      className="pl-10 pr-10"
-                    />
-                    <button
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      aria-label="Toggle password visibility"
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-                <Button
-                  className="w-full bg-primary text-white hover:bg-primary/90"
-                  onClick={handleLogin}
-                >
-                  Login
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="signup-name" className="text-sm font-medium">
-                    Full Name
-                  </Label>
-                  <div className="relative mt-1.5">
-                    <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      id="signup-name"
-                      placeholder="Your full name"
-                      value={signupName}
-                      onChange={(event) => setSignupName(event.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="signup-email" className="text-sm font-medium">
-                    Email
-                  </Label>
-                  <div className="relative mt-1.5">
-                    <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      placeholder="you@example.com"
-                      value={signupEmail}
-                      onChange={(event) => setSignupEmail(event.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="signup-password" className="text-sm font-medium">
-                    Password
-                  </Label>
-                  <div className="relative mt-1.5">
-                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      id="signup-password"
-                      type="password"
-                      placeholder="Create a password"
-                      value={signupPassword}
-                      onChange={(event) => setSignupPassword(event.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-                <Button
-                  className="w-full bg-primary text-white hover:bg-primary/90"
-                  onClick={handleSignup}
-                >
-                  Create Account
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
+          <form onSubmit={submit} className="flex flex-col gap-3.5">
+            {isSignup && (
+              <Field label="Full name" icon={User} placeholder="Jordan Tan" />
             )}
-
-            {message ? (
-              <div className="mt-4 rounded-lg border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-                {message}
-              </div>
-            ) : null}
-
-            <div className="mt-5 border-t border-border pt-5">
-              <Link href="/">
-                <Button variant="ghost" className="w-full text-muted-foreground">
-                  Continue as Guest
-                </Button>
-              </Link>
-              <p className="mt-3 text-center text-xs text-muted-foreground">
-                Agency dashboard access requires login.
-              </p>
+            <Field label="Email" icon={Mail} placeholder="you@email.com" type="email" />
+            <Field label="Password" icon={Lock} placeholder="••••••••" type="password" />
+            <button
+              type="submit"
+              className="mt-1.5 inline-flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-[15px] font-semibold text-white shadow-lg shadow-primary/30 transition-colors hover:bg-primary-dark"
+            >
+              {isSignup ? "Create account" : "Sign in"}
+              <ArrowRight className="h-[17px] w-[17px]" />
+            </button>
+            <div className="my-1 flex items-center gap-3">
+              <span className="h-px flex-1 bg-line" />
+              <span className="text-xs text-slate-400">or</span>
+              <span className="h-px flex-1 bg-line" />
             </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+            <button
+              type="button"
+              onClick={() => router.push("/")}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white py-3 text-sm font-semibold text-ink transition-colors hover:bg-slate-100"
+            >
+              <User className="h-4 w-4" /> Continue as guest
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
+  );
+}
+
+function Field({
+  label,
+  icon: Icon,
+  placeholder,
+  type = "text",
+}: {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  placeholder: string;
+  type?: string;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-[13px] font-semibold text-ink">{label}</span>
+      <span className="flex items-center gap-2.5 rounded-[10px] border border-slate-300 px-3">
+        <Icon className="h-4 w-4 text-slate-400" />
+        <input
+          type={type}
+          placeholder={placeholder}
+          className="flex-1 bg-transparent py-3 text-sm text-ink outline-none placeholder:text-slate-400"
+        />
+      </span>
+    </label>
   );
 }
