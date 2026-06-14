@@ -18,8 +18,8 @@ import { useEffect, useState } from "react";
 import { PriorityScore } from "@/components/PriorityScore";
 import { SeverityBadge } from "@/components/SeverityBadge";
 import { StatusBadge } from "@/components/StatusBadge";
-import { getSupabaseBrowserClient } from "@/lib/supabaseClient";
-import type { Severity } from "@/lib/mockReports";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
+import type { Severity } from "@/lib/reports";
 
 type SavedReport = {
   id: string;

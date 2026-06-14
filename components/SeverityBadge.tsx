@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import type { Severity } from "@/lib/mockReports";
+import type { Severity } from "@/lib/reports";
 
 const severityStyles = {
   Low: {

@@ -1,4 +1,4 @@
-import { statusColors, type DisplayStatus } from "@/lib/mockReports";
+import { statusColors, type DisplayStatus } from "@/lib/reports";
 
 type StatusBadgeProps = {
   status: DisplayStatus | string;

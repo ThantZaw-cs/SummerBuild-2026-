@@ -1,4 +1,9 @@
-import { severityStyles, statusStyles, type Severity, type Status } from "@/lib/data";
+import {
+  severityStyles,
+  statusStyles,
+  type DisplayStatus,
+  type Severity
+} from "@/lib/reports";
 
 export function SeverityBadge({ severity }: { severity: Severity }) {
   const s = severityStyles[severity];
@@ -12,7 +17,7 @@ export function SeverityBadge({ severity }: { severity: Severity }) {
   );
 }
 
-export function StatusBadge({ status }: { status: Status }) {
+export function StatusBadge({ status }: { status: DisplayStatus }) {
   return (
     <span
       className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold ring-1 ring-inset ${statusStyles[status]}`}

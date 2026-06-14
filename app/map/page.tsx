@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, MapPin } from "lucide-react";
+import { AuthGate } from "@/components/AuthGate";
 import {
   projectToMap,
   reports,
@@ -19,6 +20,14 @@ const LEGEND: { label: Severity; dot: string }[] = [
 ];
 
 export default function MapPage() {
+  return (
+    <AuthGate allowedRoles={["agency", "admin"]}>
+      <MapContent />
+    </AuthGate>
+  );
+}
+
+function MapContent() {
   const [selectedId, setSelectedId] = useState(reports[0].id);
   const selected = reports.find((r) => r.id === selectedId)!;
 

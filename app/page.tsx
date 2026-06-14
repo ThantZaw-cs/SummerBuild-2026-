@@ -62,7 +62,7 @@ export default function HomePage() {
             routed, scored, and ready to act on.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Link href="/report" className="inline-flex items-center gap-2 rounded-xl bg-primary px-7 py-3.5 text-base font-semibold text-white shadow-lg shadow-primary/30 transition-colors hover:bg-primary-dark">
+            <Link href="/submit" className="inline-flex items-center gap-2 rounded-xl bg-primary px-7 py-3.5 text-base font-semibold text-white shadow-lg shadow-primary/30 transition-colors hover:bg-primary-dark">
               Report an Issue <ArrowRight className="h-[18px] w-[18px]" />
             </Link>
             <Link href="/dashboard" className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-7 py-3.5 text-base font-semibold text-ink transition-colors hover:bg-slate-100">
@@ -194,7 +194,7 @@ export default function HomePage() {
                 seconds to put it in front of the people who can fix it.
               </p>
               <div className="mt-7 flex flex-wrap justify-center gap-3">
-                <Link href="/report" className="inline-flex items-center gap-2 rounded-xl bg-primary px-7 py-3.5 text-base font-semibold text-white transition-colors hover:bg-primary-dark">
+                <Link href="/submit" className="inline-flex items-center gap-2 rounded-xl bg-primary px-7 py-3.5 text-base font-semibold text-white transition-colors hover:bg-primary-dark">
                   Start a Report <ArrowRight className="h-[18px] w-[18px]" />
                 </Link>
                 <Link href="/map" className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-7 py-3.5 text-base font-semibold text-white transition-colors hover:bg-white/15">

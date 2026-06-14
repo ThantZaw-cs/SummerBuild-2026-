@@ -82,6 +82,13 @@ npm run dev
 
 3. Open `http://localhost:3000`
 
+## MVP Account Roles
+
+Public signup always creates a `profiles` row with `role = 'citizen'`.
+For the MVP, agency/admin accounts are created by signing up normally, then
+manually changing `profiles.role` from `citizen` to `agency` or `admin` in
+Supabase.
+
 ## Starter Structure
 
 ```txt

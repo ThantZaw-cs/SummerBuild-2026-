@@ -161,6 +161,13 @@ for insert
 to authenticated
 with check (id = auth.uid() and role = 'citizen');
 
+create policy "Users can update their own profile"
+on public.profiles
+for update
+to authenticated
+using (id = auth.uid())
+with check (id = auth.uid());
+
 create policy "Citizens can insert their own reports"
 on public.reports
 for insert
@@ -173,6 +180,15 @@ with check (
     where id = auth.uid()
       and role = 'citizen'
   )
+);
+
+create policy "Agency and admins can insert their own reports"
+on public.reports
+for insert
+to authenticated
+with check (
+  user_id = auth.uid()
+  and public.current_user_is_agency_or_admin()
 );
 
 create policy "Citizens can read their own reports"
@@ -211,6 +227,7 @@ revoke all on public.reports from anon, authenticated;
 revoke all on public.report_duplicates from anon, authenticated;
 
 grant select, insert on public.profiles to authenticated;
+grant update (full_name) on public.profiles to authenticated;
 grant select, insert on public.reports to authenticated;
 grant update (status) on public.reports to authenticated;
 grant select, insert on public.report_duplicates to authenticated;
