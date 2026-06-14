@@ -1,6 +1,25 @@
 export type Database = {
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          id: string;
+          full_name: string | null;
+          role: Database["public"]["Enums"]["user_role"];
+          created_at: string;
+        };
+        Insert: {
+          id: string;
+          full_name?: string | null;
+          role?: Database["public"]["Enums"]["user_role"];
+          created_at?: string;
+        };
+        Update: {
+          full_name?: string | null;
+          role?: Database["public"]["Enums"]["user_role"];
+        };
+        Relationships: [];
+      };
       reports: {
         Row: {
           id: string;

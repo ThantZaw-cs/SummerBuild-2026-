@@ -2,29 +2,45 @@ import type { Config } from "tailwindcss";
 
 const config: Config = {
   content: [
-    "./app/**/*.{js,ts,jsx,tsx,mdx}",
-    "./components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./lib/**/*.{js,ts,jsx,tsx,mdx}"
+    "./app/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./lib/**/*.{ts,tsx}",
   ],
   theme: {
     extend: {
       colors: {
-        ink: "#10222d",
-        mist: "#f6f5ef",
-        tide: "#dbe8ea",
-        ember: "#d56b3d",
-        moss: "#4c7b6d",
-        gold: "#d7aa2f"
-      },
-      boxShadow: {
-        panel: "0 20px 40px rgba(16, 34, 45, 0.12)"
+        // Warm civic accent (was hsl(23 70% 45%))
+        primary: {
+          DEFAULT: "#C36022",
+          dark: "#A6501B",
+          soft: "#F9ECE3",
+        },
+        // Deep navy ink (headings / dark surfaces)
+        ink: "#0A2A4F",
+        accent: "#2E9486", // teal
+        canvas: "#F7F9FB", // app background
+        line: "#E6EAF0", // hairline borders
       },
       fontFamily: {
-        sans: ["var(--font-sans)", "system-ui", "sans-serif"]
-      }
-    }
+        sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        mono: ["'JetBrains Mono'", "ui-monospace", "monospace"],
+      },
+      borderRadius: {
+        xl: "0.875rem",
+        "2xl": "1.125rem",
+      },
+      keyframes: {
+        pulseSoft: {
+          "0%,100%": { opacity: "1" },
+          "50%": { opacity: "0.45" },
+        },
+      },
+      animation: {
+        pulseSoft: "pulseSoft 2s ease-in-out infinite",
+      },
+    },
   },
-  plugins: []
+  plugins: [],
 };
 
 export default config;
