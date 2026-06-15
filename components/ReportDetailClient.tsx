@@ -38,9 +38,12 @@ import { loadReportFromSupabase, updateReportStatus } from "@/lib/reportQueries"
 
 const statusOptions: DisplayStatus[] = [
   "Pending Review",
+  "Under Review",
   "Verified",
+  "Assigned",
   "In Progress",
-  "Resolved"
+  "Resolved",
+  "Rejected"
 ];
 
 export function ReportDetailClient({ reportId }: { reportId: string }) {

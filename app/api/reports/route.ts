@@ -8,7 +8,7 @@ type ReportRequest = {
   location_text?: string;
   media_url?: string;
   media_type?: "image" | "video";
-  issue_type?: string | null;
+  category?: string | null;
 };
 
 type RekaAnalysis = {
@@ -18,6 +18,7 @@ type RekaAnalysis = {
   ai_summary: string;
   recommended_action: string;
   priority_score: number;
+  congestion_impact: string;
 };
 
 export async function POST(request: Request) {
@@ -33,6 +34,7 @@ export async function POST(request: Request) {
     const locationText = body.location_text?.trim();
     const mediaUrl = body.media_url?.trim();
     const mediaType = body.media_type ?? "image";
+    const category = body.category?.trim() || null;
 
     if (!description || !locationText || !mediaUrl) {
       return NextResponse.json(
@@ -51,21 +53,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid or expired session." }, { status: 401 });
     }
 
-    await ensureUserProfile(supabase, user);
+    const profile = await ensureUserProfile(supabase, user);
 
     const analysis = await analyzeWithReka({
       description,
       locationText,
       mediaUrl,
       mediaType,
-      issueTypeHint: body.issue_type ?? null
+      categoryHint: category
     });
 
     const { data, error } = await supabase
       .from("reports")
       .insert({
         user_id: user.id,
+        submitted_by_name: profile.full_name ?? user.email ?? "Citizen",
+        title: analysis.issue_type,
         short_description: description,
+        description,
+        category,
         location_text: locationText,
         media_url: mediaUrl,
         media_type: mediaType,
@@ -75,8 +81,9 @@ export async function POST(request: Request) {
         ai_summary: analysis.ai_summary,
         recommended_action: analysis.recommended_action,
         priority_score: analysis.priority_score,
+        congestion_impact: analysis.congestion_impact,
         duplicate_count: 0,
-        status: "submitted"
+        status: "pending_review"
       })
       .select("id")
       .single();
@@ -114,13 +121,13 @@ async function analyzeWithReka({
   locationText,
   mediaUrl,
   mediaType,
-  issueTypeHint
+  categoryHint
 }: {
   description: string;
   locationText: string;
   mediaUrl: string;
   mediaType: "image" | "video";
-  issueTypeHint: string | null;
+  categoryHint: string | null;
 }): Promise<RekaAnalysis> {
   const apiKey = process.env.REKA_API_KEY;
   const apiUrl = process.env.REKA_API_URL ?? "https://api.reka.ai/v1/chat/completions";
@@ -133,10 +140,10 @@ async function analyzeWithReka({
   const prompt = [
     "Analyze this civic infrastructure report and return JSON only.",
     "The JSON shape must be:",
-    "{\"issue_type\":\"string\",\"severity\":\"Low|Medium|High|Critical\",\"authenticity_score\":0-100,\"ai_summary\":\"string\",\"recommended_action\":\"string\",\"priority_score\":0-100}",
+    "{\"issue_type\":\"string\",\"severity\":\"low|medium|high|critical\",\"authenticity_score\":0-100,\"ai_summary\":\"string\",\"recommended_action\":\"string\",\"priority_score\":0-100,\"congestion_impact\":\"string\"}",
     `Description: ${description}`,
     `Location: ${locationText}`,
-    issueTypeHint ? `Citizen category hint: ${issueTypeHint}` : null,
+    categoryHint ? `Citizen category hint: ${categoryHint}` : null,
     `Media type: ${mediaType}`
   ]
     .filter(Boolean)
@@ -186,16 +193,24 @@ function normalizeRekaAnalysis(value: Partial<RekaAnalysis>): RekaAnalysis {
     authenticity_score: clampScore(value.authenticity_score),
     ai_summary: String(value.ai_summary ?? "AI summary unavailable."),
     recommended_action: String(value.recommended_action ?? "Review and route to the appropriate maintenance team."),
-    priority_score: clampScore(value.priority_score)
+    priority_score: clampScore(value.priority_score),
+    congestion_impact: String(value.congestion_impact ?? "Pending analysis")
   };
 }
 
 function normalizeSeverity(value: unknown): RekaAnalysis["severity"] {
-  if (value === "Critical" || value === "High" || value === "Medium" || value === "Low") {
-    return value;
+  const normalized = String(value ?? "").toLowerCase();
+
+  if (
+    normalized === "critical" ||
+    normalized === "high" ||
+    normalized === "medium" ||
+    normalized === "low"
+  ) {
+    return normalized;
   }
 
-  return "Low";
+  return "low";
 }
 
 function clampScore(value: unknown) {

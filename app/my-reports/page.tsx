@@ -6,7 +6,6 @@ import { ChevronRight, MapPin, Plus } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { StatusBadge } from "@/components/Badges";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
-import { fetchUserProfile } from "@/lib/auth";
 import {
   formatDate,
   normalizeSupabaseReport,
@@ -18,7 +17,9 @@ import {
 const STAGES = ["Submitted", "Reviewed", "In progress", "Resolved"];
 const statusStage: Record<DisplayStatus, number> = {
   "Pending Review": 0,
+  "Under Review": 1,
   Verified: 1,
+  Assigned: 1,
   "In Progress": 2,
   Resolved: 3,
   Rejected: 0
@@ -55,18 +56,11 @@ function MyReportsContent() {
           throw new Error("Please log in to view your reports.");
         }
 
-        const profile = await fetchUserProfile(supabase, user.id);
-        const canReadAll = profile?.role === "agency" || profile?.role === "admin";
-        let builder = supabase
+        const { data, error } = await supabase
           .from("reports")
           .select(reportSelect)
+          .eq("user_id", user.id)
           .order("created_at", { ascending: false });
-
-        if (!canReadAll) {
-          builder = builder.eq("user_id", user.id);
-        }
-
-        const { data, error } = await builder;
 
         if (error) {
           throw error;
@@ -156,7 +150,7 @@ function MyReportsContent() {
                       </p>
                     </div>
                     <Link
-                      href={`/reports/${report.id}`}
+                      href={`/report/${report.id}`}
                       className="inline-flex flex-none items-center gap-1.5 rounded-[9px] border border-slate-300 bg-white px-3 py-2 text-[13px] font-semibold text-ink transition-colors hover:bg-slate-100"
                     >
                       View <ChevronRight className="h-[15px] w-[15px]" />

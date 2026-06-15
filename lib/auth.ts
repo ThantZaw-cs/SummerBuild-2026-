@@ -5,10 +5,11 @@ import type { UserRole } from "@/lib/reports";
 export type Profile = {
   id: string;
   full_name: string | null;
+  email: string | null;
   role: UserRole;
 };
 
-const profileSelect = "id, full_name, role";
+const profileSelect = "id, full_name, email, role";
 
 export function getDefaultProfileName(user: Pick<User, "email">, fullName?: string) {
   const trimmedName = fullName?.trim();
@@ -57,16 +58,25 @@ export async function ensureUserProfile(
   if (options.forceCitizenRole) {
     const { data, error } = await supabase
       .from("profiles")
-      .upsert({
+      .insert({
         id: user.id,
         full_name: fullName,
+        email: user.email ?? null,
         role: "citizen"
       })
       .select(profileSelect)
       .single();
 
     if (error) {
-      console.error("Profile upsert failed during signup:", error);
+      if (error.code === "23505") {
+        const existingProfile = await fetchUserProfile(supabase, user.id);
+
+        if (existingProfile) {
+          return existingProfile as Profile;
+        }
+      }
+
+      console.error("Profile insert failed during signup:", error);
       throw error;
     }
 
@@ -81,16 +91,25 @@ export async function ensureUserProfile(
 
   const { data, error } = await supabase
     .from("profiles")
-      .upsert({
-        id: user.id,
-        full_name: fullName,
-        role: "citizen"
-      })
+    .insert({
+      id: user.id,
+      full_name: fullName,
+      email: user.email ?? null,
+      role: "citizen"
+    })
     .select(profileSelect)
     .single();
 
   if (error) {
-    console.error("Profile upsert failed after login:", error);
+    if (error.code === "23505") {
+      const existingProfile = await fetchUserProfile(supabase, user.id);
+
+      if (existingProfile) {
+        return existingProfile as Profile;
+      }
+    }
+
+    console.error("Profile insert failed after login:", error);
     throw error;
   }
 

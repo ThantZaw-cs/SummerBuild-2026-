@@ -1,5 +1,6 @@
 import {
   severityStyles,
+  severityToDisplay,
   statusStyles,
   type DisplayStatus,
   type Severity
@@ -12,7 +13,7 @@ export function SeverityBadge({ severity }: { severity: Severity }) {
       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ring-1 ring-inset ${s.badge}`}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
-      {severity}
+      {severityToDisplay[severity]}
     </span>
   );
 }

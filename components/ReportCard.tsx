@@ -54,7 +54,7 @@ export function ReportCard({ report }: ReportCardProps) {
 
       <div className="mt-5 flex flex-wrap gap-3">
         <Link
-          href={`/reports/${report.id}`}
+          href={`/report/${report.id}`}
           className="rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-ink/90"
         >
           View details

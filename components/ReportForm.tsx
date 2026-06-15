@@ -96,8 +96,7 @@ export function ReportForm() {
       }
 
       const mediaType = file.type.startsWith("video") ? "video" : "image";
-      const extension = file.name.split(".").pop() ?? mediaType;
-      const filePath = `${user.id}/${crypto.randomUUID()}.${extension}`;
+      const filePath = `${user.id}/${Date.now()}-${file.name}`;
       const { error: uploadError } = await supabase.storage
         .from("report-media")
         .upload(filePath, file, {
@@ -195,7 +194,7 @@ export function ReportForm() {
           location_text: location,
           media_url: uploadedMediaUrl,
           media_type: uploadedMediaType,
-          issue_type: category || null
+          category: category || null
         })
       });
 
@@ -205,7 +204,7 @@ export function ReportForm() {
         throw new Error(payload.error ?? "Unable to submit report.");
       }
 
-      router.push(`/reports/${payload.id}`);
+      router.push(`/report/${payload.id}/result`);
     } catch (error) {
       setMessage(
         error instanceof Error

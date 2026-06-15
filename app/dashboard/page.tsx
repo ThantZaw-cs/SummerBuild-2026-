@@ -18,20 +18,16 @@ import {
   normalizeSupabaseReport,
   reportSelect,
   severityStyles,
+  severityToDisplay,
   sortByPriority,
+  STATUS_ORDER,
   type CivicReport,
   type DisplayStatus,
   type Severity
 } from "@/lib/reports";
 
-const SEV_FILTERS: (Severity | "All")[] = ["All", "Critical", "High", "Medium", "Low"];
-const STATUS_FILTERS: (DisplayStatus | "All")[] = [
-  "All",
-  "Pending Review",
-  "Verified",
-  "In Progress",
-  "Resolved"
-];
+const SEV_FILTERS: (Severity | "All")[] = ["All", "critical", "high", "medium", "low"];
+const STATUS_FILTERS: (DisplayStatus | "All")[] = ["All", ...STATUS_ORDER];
 
 export default function DashboardPage() {
   return (
@@ -132,7 +128,7 @@ function DashboardContent() {
 
   const active = reports.filter((item) => item.status !== "Resolved").length;
   const criticalOrHigh = reports.filter(
-    (item) => item.severity === "Critical" || item.severity === "High"
+    (item) => item.severity === "critical" || item.severity === "high"
   ).length;
   const inProgress = reports.filter((item) => item.status === "In Progress").length;
   const resolved = reports.filter((item) => item.status === "Resolved").length;
@@ -195,7 +191,9 @@ function DashboardContent() {
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Severity</span>
               {SEV_FILTERS.map((value) => (
-                <button key={value} onClick={() => setSev(value)} className={chip(sev === value)}>{value}</button>
+                <button key={value} onClick={() => setSev(value)} className={chip(sev === value)}>
+                  {value === "All" ? value : severityToDisplay[value]}
+                </button>
               ))}
             </div>
             <div className="flex items-center gap-2">
@@ -217,7 +215,7 @@ function DashboardContent() {
           <div className="px-5 py-16 text-center text-sm text-red-600">{message}</div>
         ) : rows.length > 0 ? (
           rows.map((report) => (
-            <Link key={report.id} href={`/reports/${report.id}`} className={`grid ${GRID} items-center gap-3.5 border-b border-slate-100 px-5 py-3.5 transition-colors hover:bg-[#FBFCFD]`}>
+            <Link key={report.id} href={`/report/${report.id}`} className={`grid ${GRID} items-center gap-3.5 border-b border-slate-100 px-5 py-3.5 transition-colors hover:bg-[#FBFCFD]`}>
               <span className="truncate font-mono text-[12.5px] text-slate-500">{report.id}</span>
               <span className="min-w-0">
                 <span className="block truncate text-[14.5px] font-semibold text-ink">{report.title}</span>
