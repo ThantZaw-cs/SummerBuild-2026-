@@ -5,7 +5,6 @@ import {
   getPriorityScoreBreakdown,
   isPendingLocationImpact
 } from "@/lib/priority";
-import { analyzeReportWithReka } from "@/lib/reka";
 
 type ReportRequest = {
   description?: string;
@@ -48,15 +47,7 @@ export async function POST(request: Request) {
     }
 
     const profile = await ensureUserProfile(supabase, user);
-
-    const analysis = await analyzeReportWithReka({
-      description,
-      locationText,
-      mediaUrl,
-      mediaType,
-      category,
-      congestionImpact: null
-    });
+    const analysis = createPlaceholderAnalysis();
     const priorityBreakdown = getPriorityScoreBreakdown({
       severity: analysis.severity,
       authenticityScore: analysis.authenticity_score,
@@ -121,4 +112,15 @@ function getBearerToken(request: Request) {
   }
 
   return authorization.slice("bearer ".length).trim();
+}
+
+function createPlaceholderAnalysis() {
+  return {
+    issue_type: "Pending AI Analysis",
+    severity: "low" as const,
+    authenticity_score: 0,
+    ai_summary: "AI analysis has not been run yet.",
+    recommended_action: "Awaiting agency review and AI analysis.",
+    congestion_impact: "Pending analysis"
+  };
 }

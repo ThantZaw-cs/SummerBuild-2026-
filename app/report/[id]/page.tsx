@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Activity,
@@ -66,6 +66,7 @@ type ReportEditDraft = {
 type AnalyzeResponse = {
   report?: ReportRow;
   usedFallback?: boolean;
+  fallbackReason?: "missing_key" | "request_failed" | "invalid_response" | null;
   note?: string;
   error?: string;
 };
@@ -75,11 +76,13 @@ const SEVERITY_OPTIONS: Severity[] = ["low", "medium", "high", "critical"];
 export default function ReportDetailPage({
   params
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = use(params);
+
   return (
     <AuthGate>
-      <ReportDetail reportId={params.id} />
+      <ReportDetail reportId={id} />
     </AuthGate>
   );
 }
@@ -407,11 +410,7 @@ function ReportDetail({ reportId }: { reportId: string }) {
           time: new Date().toISOString()
         }
       ]);
-      setMessage(
-        payload.usedFallback
-          ? "Mock AI analysis generated because REKA_API_KEY is not configured."
-          : "AI analysis generated."
-      );
+      setMessage(getAnalysisMessage(payload));
       setMessageTone("success");
     } catch (error) {
       setMessageTone("error");
@@ -835,6 +834,22 @@ function clampNumber(value: string, min: number, max: number, fallback: number) 
   }
 
   return Math.max(min, Math.min(max, Math.round(parsed)));
+}
+
+function getAnalysisMessage(payload: AnalyzeResponse) {
+  if (!payload.usedFallback) {
+    return "AI analysis generated.";
+  }
+
+  if (payload.fallbackReason === "missing_key") {
+    return "Mock AI analysis generated because REKA_API_KEY is not configured on the server.";
+  }
+
+  if (payload.fallbackReason === "request_failed") {
+    return "Mock AI analysis generated because the Reka request failed. Check the server console for endpoint, status, and response body.";
+  }
+
+  return "Mock AI analysis generated because Reka returned an invalid or unreadable response. Check the server console for details.";
 }
 
 async function insertActivityLog(

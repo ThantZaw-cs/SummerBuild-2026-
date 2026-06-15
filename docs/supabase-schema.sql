@@ -268,6 +268,7 @@ grant select, insert on public.reports to authenticated;
 grant update(
   status,
   severity,
+  authenticity_score,
   priority_score,
   recommended_action,
   ai_summary,

@@ -114,6 +114,7 @@ export async function POST(request: Request, context: RouteContext) {
       report: updatedReport,
       normalizedReport: normalizeSupabaseReport(updatedReport),
       usedFallback: analysis.usedFallback,
+      fallbackReason: analysis.fallbackReason,
       note
     });
   } catch (error) {

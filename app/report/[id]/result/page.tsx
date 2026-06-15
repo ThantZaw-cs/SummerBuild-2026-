@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Activity,
@@ -24,11 +24,13 @@ import {
 export default function ReportResultPage({
   params
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = use(params);
+
   return (
     <AuthGate allowedRoles={["citizen", "agency", "admin"]}>
-      <ReportResult reportId={params.id} />
+      <ReportResult reportId={id} />
     </AuthGate>
   );
 }
