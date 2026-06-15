@@ -27,7 +27,7 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { getSupabaseBrowserClient } from "@/lib/supabaseClient";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 
 const steps = [
   { id: 1, label: "Upload Media", icon: Camera },
@@ -50,10 +50,13 @@ export function ReportForm() {
   const [currentStep, setCurrentStep] = useState(1);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uploadedMediaUrl, setUploadedMediaUrl] = useState<string | null>(null);
+  const [uploadedMediaType, setUploadedMediaType] = useState<"image" | "video">("image");
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -64,7 +67,7 @@ export function ReportForm() {
     };
   }, [previewUrl]);
 
-  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
 
     if (!file) {
@@ -77,6 +80,51 @@ export function ReportForm() {
 
     setUploadedFile(file);
     setPreviewUrl(URL.createObjectURL(file));
+    setUploadedMediaUrl(null);
+    setMessage(null);
+    setIsUploading(true);
+
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const {
+        data: { user },
+        error: userError
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        throw new Error("Please log in before uploading media.");
+      }
+
+      const mediaType = file.type.startsWith("video") ? "video" : "image";
+      const filePath = `${user.id}/${Date.now()}-${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from("report-media")
+        .upload(filePath, file, {
+          contentType: file.type,
+          upsert: false
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: publicUrl } = supabase.storage
+        .from("report-media")
+        .getPublicUrl(filePath);
+
+      setUploadedMediaUrl(publicUrl.publicUrl);
+      setUploadedMediaType(mediaType);
+    } catch (error) {
+      setUploadedFile(null);
+      setUploadedMediaUrl(null);
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to upload media. Please try again."
+      );
+    } finally {
+      setIsUploading(false);
+    }
   }
 
   function removeFile() {
@@ -86,11 +134,12 @@ export function ReportForm() {
 
     setUploadedFile(null);
     setPreviewUrl(null);
+    setUploadedMediaUrl(null);
   }
 
   function canProceed() {
     if (currentStep === 1) {
-      return Boolean(uploadedFile);
+      return Boolean(uploadedFile && uploadedMediaUrl && !isUploading);
     }
 
     if (currentStep === 2) {
@@ -123,56 +172,39 @@ export function ReportForm() {
         throw new Error("Please log in before submitting a report.");
       }
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (!profile) {
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .insert({ id: user.id, full_name: user.email ?? null });
-
-        if (profileError) {
-          throw profileError;
-        }
+      if (!uploadedMediaUrl) {
+        throw new Error("Please wait for the media upload to finish.");
       }
 
-      let mediaUrl: string | null = null;
-      const mediaType = uploadedFile.type.startsWith("video") ? "video" : "image";
-      const extension = uploadedFile.name.split(".").pop() ?? mediaType;
-      const filePath = `${user.id}/${crypto.randomUUID()}.${extension}`;
-      const { error: uploadError } = await supabase.storage
-        .from("report-media")
-        .upload(filePath, uploadedFile);
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
 
-      if (!uploadError) {
-        const { data: publicUrl } = supabase.storage
-          .from("report-media")
-          .getPublicUrl(filePath);
-        mediaUrl = publicUrl.publicUrl;
+      if (!accessToken) {
+        throw new Error("Your session expired. Please log in again.");
       }
 
-      const { data, error } = await supabase
-        .from("reports")
-        .insert({
-          user_id: user.id,
-          short_description: description,
+      const response = await fetch("/api/reports", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({
+          description,
           location_text: location,
-          media_url: mediaUrl,
-          media_type: mediaType,
-          issue_type: category || null,
-          status: "submitted"
+          media_url: uploadedMediaUrl,
+          media_type: uploadedMediaType,
+          category: category || null
         })
-        .select("id")
-        .single();
+      });
 
-      if (error) {
-        throw error;
+      const payload = (await response.json()) as { id?: string; error?: string };
+
+      if (!response.ok || !payload.id) {
+        throw new Error(payload.error ?? "Unable to submit report.");
       }
 
-      router.push(`/report/${data.id}/result`);
+      router.push(`/report/${payload.id}/result`);
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -290,6 +322,13 @@ export function ReportForm() {
                 >
                   <X className="h-4 w-4" />
                 </button>
+                <div className="absolute bottom-3 left-3 rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white">
+                  {isUploading
+                    ? "Uploading..."
+                    : uploadedMediaUrl
+                      ? "Uploaded"
+                      : "Upload needed"}
+                </div>
               </div>
             )}
               </CardContent>

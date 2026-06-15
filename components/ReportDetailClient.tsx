@@ -31,23 +31,23 @@ import { PriorityScore } from "@/components/PriorityScore";
 import { SeverityBadge } from "@/components/SeverityBadge";
 import { StatusBadge } from "@/components/StatusBadge";
 import {
-  sampleReports,
   type CivicReport,
   type DisplayStatus
-} from "@/lib/mockReports";
+} from "@/lib/reports";
 import { loadReportFromSupabase, updateReportStatus } from "@/lib/reportQueries";
 
 const statusOptions: DisplayStatus[] = [
   "Pending Review",
+  "Under Review",
   "Verified",
+  "Assigned",
   "In Progress",
-  "Resolved"
+  "Resolved",
+  "Rejected"
 ];
 
 export function ReportDetailClient({ reportId }: { reportId: string }) {
-  const [report, setReport] = useState<CivicReport | null>(
-    sampleReports.find((item) => item.id === reportId) ?? null
-  );
+  const [report, setReport] = useState<CivicReport | null>(null);
   const [status, setStatus] = useState<DisplayStatus>(
     report?.status ?? "Pending Review"
   );
@@ -147,13 +147,13 @@ export function ReportDetailClient({ reportId }: { reportId: string }) {
             <div className="overflow-hidden rounded-xl border border-border">
               {report.mediaType === "video" ? (
                 <video
-                  src={report.mediaUrl}
+                  src={report.media}
                   className="h-64 w-full object-cover sm:h-80"
                   controls
                 />
               ) : (
                 <img
-                  src={report.mediaUrl}
+                  src={report.media}
                   alt={report.title}
                   className="h-64 w-full object-cover sm:h-80"
                 />
@@ -165,14 +165,14 @@ export function ReportDetailClient({ reportId }: { reportId: string }) {
                 <div className="mb-3 flex items-center gap-2">
                   <User className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm font-medium text-foreground">
-                    {report.submittedByName}
+                    {report.by}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {format(new Date(report.submittedAt), "MMM d, yyyy 'at' HH:mm")}
+                    {format(new Date(report.at), "MMM d, yyyy 'at' HH:mm")}
                   </span>
                 </div>
                 <p className="text-sm leading-relaxed text-foreground">
-                  {report.description}
+                  {report.desc}
                 </p>
               </CardContent>
             </Card>
@@ -192,17 +192,17 @@ export function ReportDetailClient({ reportId }: { reportId: string }) {
                     { label: "Issue Type", value: report.issueType, icon: ScanSearch },
                     {
                       label: "Authenticity",
-                      value: `${report.authenticityScore}%`,
+                      value: `${report.auth}%`,
                       icon: ShieldCheck
                     },
                     {
                       label: "Duplicates",
-                      value: report.duplicateCount.toString(),
+                      value: report.dupes.toString(),
                       icon: Copy
                     },
                     {
                       label: "Congestion Impact",
-                      value: report.congestionImpact,
+                      value: report.congestion,
                       icon: Route
                     }
                   ].map((item) => {
@@ -231,14 +231,14 @@ export function ReportDetailClient({ reportId }: { reportId: string }) {
               icon={<FileText className="h-3.5 w-3.5 text-primary" />}
               iconClassName="bg-primary/10"
               label="Generated Maintenance Report"
-              text={report.generatedReport}
+              text={report.summary}
             />
 
             <InfoCard
               icon={<Wrench className="h-3.5 w-3.5 text-teal-600" />}
               iconClassName="bg-teal-50"
               label="Recommended Action"
-              text={report.recommendedAction}
+              text={report.action}
             />
           </div>
 
@@ -249,7 +249,7 @@ export function ReportDetailClient({ reportId }: { reportId: string }) {
                   <p className="mb-2 text-xs font-medium text-muted-foreground">
                     Priority Score
                   </p>
-                  <PriorityScore score={report.priorityScore} size="lg" />
+                  <PriorityScore score={report.priority} size="lg" />
                 </div>
                 <div>
                   <p className="mb-2 text-xs font-medium text-muted-foreground">

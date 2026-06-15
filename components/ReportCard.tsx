@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { SeverityBadge } from "@/components/SeverityBadge";
-import type { MockReport } from "@/lib/mockReports";
+import type { CivicReport } from "@/lib/reports";
 
 type ReportCardProps = {
-  report: MockReport;
+  report: CivicReport;
 };
 
 export function ReportCard({ report }: ReportCardProps) {
@@ -21,12 +21,12 @@ export function ReportCard({ report }: ReportCardProps) {
             {report.title}
           </h2>
           <p className="mt-2 max-w-3xl text-sm leading-7 text-ink/72">
-            {report.generatedReport}
+            {report.summary}
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-ink/50">
             <span>{report.location}</span>
             <span>{report.status}</span>
-            <span>{report.submittedAt}</span>
+            <span>{report.at}</span>
           </div>
         </div>
 
@@ -38,16 +38,16 @@ export function ReportCard({ report }: ReportCardProps) {
             <div className="mt-2 h-2 rounded-full bg-white">
               <div
                 className="h-2 rounded-full bg-ink"
-                style={{ width: `${report.priorityScore}%` }}
+                style={{ width: `${report.priority}%` }}
               />
             </div>
             <p className="mt-2 text-sm font-semibold text-ink">
-              {report.priorityScore}/100
+              {report.priority}/100
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <MetaRow label="Auth." value={`${report.authenticityScore}/100`} />
-            <MetaRow label="Dupes" value={report.duplicateCount.toString()} />
+            <MetaRow label="Auth." value={`${report.auth}/100`} />
+            <MetaRow label="Dupes" value={report.dupes.toString()} />
           </div>
         </div>
       </div>
@@ -60,7 +60,7 @@ export function ReportCard({ report }: ReportCardProps) {
           View details
         </Link>
         <Link
-          href="/report"
+          href="/submit"
           className="rounded-full border border-ink/15 bg-white px-4 py-2 text-sm font-semibold text-ink transition hover:border-ink/30 hover:bg-ink/5"
         >
           Add another report

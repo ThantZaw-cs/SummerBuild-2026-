@@ -3,7 +3,9 @@ import type { Database } from "@/lib/supabaseTypes";
 export type Severity = "Low" | "Medium" | "High" | "Critical";
 export type DisplayStatus =
   | "Pending Review"
+  | "Under Review"
   | "Verified"
+  | "Assigned"
   | "In Progress"
   | "Resolved"
   | "Rejected";
@@ -423,24 +425,29 @@ export const severityColors = {
 
 export const statusColors: Record<DisplayStatus, string> = {
   "Pending Review": "bg-slate-100 text-slate-600 border-slate-200",
+  "Under Review": "bg-cyan-50 text-cyan-700 border-cyan-200",
   Verified: "bg-blue-50 text-blue-700 border-blue-200",
+  Assigned: "bg-violet-50 text-violet-700 border-violet-200",
   "In Progress": "bg-teal-50 text-teal-700 border-teal-200",
   Resolved: "bg-emerald-50 text-emerald-700 border-emerald-200",
   Rejected: "bg-red-50 text-red-700 border-red-200"
 };
 
 export const supabaseToDisplayStatus: Record<SupabaseStatus, DisplayStatus> = {
-  submitted: "Pending Review",
-  under_review: "Pending Review",
-  assigned: "Verified",
+  pending_review: "Pending Review",
+  under_review: "Under Review",
+  verified: "Verified",
+  assigned: "Assigned",
   in_progress: "In Progress",
   resolved: "Resolved",
   rejected: "Rejected"
 };
 
 export const displayToSupabaseStatus: Record<DisplayStatus, SupabaseStatus> = {
-  "Pending Review": "under_review",
-  Verified: "assigned",
+  "Pending Review": "pending_review",
+  "Under Review": "under_review",
+  Verified: "verified",
+  Assigned: "assigned",
   "In Progress": "in_progress",
   Resolved: "resolved",
   Rejected: "rejected"
@@ -462,7 +469,7 @@ export function normalizeSupabaseReport(row: SupabaseReportRow): CivicReport {
     location: row.location_text,
     lat: row.latitude,
     lng: row.longitude,
-    severity: row.severity,
+    severity: normalizeSeverity(row.severity),
     status: supabaseToDisplayStatus[row.status],
     authenticityScore: Math.round(Number(row.authenticity_score ?? 0)),
     duplicateCount: row.duplicate_count,
@@ -501,6 +508,15 @@ export function sortReportsByPriority(reports: CivicReport[]) {
 
 export function getMockReportById(id: string) {
   return sampleReports.find((report) => report.id === id);
+}
+
+function normalizeSeverity(severity: string): Severity {
+  if (severity === "low") return "Low";
+  if (severity === "medium") return "Medium";
+  if (severity === "high") return "High";
+  if (severity === "critical") return "Critical";
+
+  return severity as Severity;
 }
 
 function inferCategory(issueType: string) {

@@ -1,20 +1,20 @@
 import { clsx } from "clsx";
-import type { Severity } from "@/lib/mockReports";
+import { severityToDisplay, type Severity } from "@/lib/reports";
 
 const severityStyles = {
-  Low: {
+  low: {
     wrapper: "bg-emerald-50 text-emerald-700 border-emerald-200",
     dot: "bg-emerald-500"
   },
-  Medium: {
+  medium: {
     wrapper: "bg-amber-50 text-amber-700 border-amber-200",
     dot: "bg-amber-500"
   },
-  High: {
+  high: {
     wrapper: "bg-orange-50 text-orange-700 border-orange-200",
     dot: "bg-orange-500"
   },
-  Critical: {
+  critical: {
     wrapper: "bg-red-50 text-red-700 border-red-200",
     dot: "bg-red-500"
   }
@@ -37,7 +37,7 @@ export function SeverityBadge({ severity, size = "sm" }: SeverityBadgeProps) {
       )}
     >
       <span className={clsx("h-1.5 w-1.5 rounded-full", severityStyles[severity].dot)} />
-      {severity}
+      {severityToDisplay[severity]}
     </span>
   );
 }

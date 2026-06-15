@@ -1,4 +1,4 @@
-import { statusColors, type DisplayStatus } from "@/lib/mockReports";
+import { statusColors, type DisplayStatus } from "@/lib/reports";
 
 type StatusBadgeProps = {
   status: DisplayStatus | string;
@@ -29,8 +29,16 @@ function normalizeStatus(status: string): DisplayStatus {
     return "In Progress";
   }
 
-  if (normalized.includes("verified") || normalized.includes("assigned")) {
+  if (normalized.includes("under review")) {
+    return "Under Review";
+  }
+
+  if (normalized.includes("verified")) {
     return "Verified";
+  }
+
+  if (normalized.includes("assigned")) {
+    return "Assigned";
   }
 
   if (normalized.includes("rejected")) {

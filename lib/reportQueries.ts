@@ -1,16 +1,12 @@
-import { getSupabaseBrowserClient } from "@/lib/supabaseClient";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 import {
-  getMockReportById,
   normalizeSupabaseReport,
-  sampleReports,
-  sortReportsByPriority,
+  reportSelect,
+  sortByPriority,
   type CivicReport,
   type DisplayStatus,
   displayToSupabaseStatus
-} from "@/lib/mockReports";
-
-const reportSelect =
-  "id, user_id, short_description, location_text, latitude, longitude, media_url, media_type, issue_type, severity, authenticity_score, ai_summary, recommended_action, priority_score, duplicate_count, status, created_at, updated_at";
+} from "@/lib/reports";
 
 export async function loadReportsFromSupabase() {
   try {
@@ -21,13 +17,13 @@ export async function loadReportsFromSupabase() {
       .order("priority_score", { ascending: false })
       .order("created_at", { ascending: false });
 
-    if (error || !data?.length) {
-      return sampleReports;
+    if (error) {
+      throw error;
     }
 
-    return sortReportsByPriority(data.map(normalizeSupabaseReport));
-  } catch {
-    return sampleReports;
+    return sortByPriority((data ?? []).map(normalizeSupabaseReport));
+  } catch (error) {
+    throw error;
   }
 }
 
@@ -39,7 +35,7 @@ export async function loadMyReportsFromSupabase() {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return sampleReports.slice(0, 4);
+      return [];
     }
 
     const { data, error } = await supabase
@@ -48,13 +44,13 @@ export async function loadMyReportsFromSupabase() {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
-    if (error || !data?.length) {
-      return sampleReports.slice(0, 4);
+    if (error) {
+      throw error;
     }
 
-    return data.map(normalizeSupabaseReport);
-  } catch {
-    return sampleReports.slice(0, 4);
+    return (data ?? []).map(normalizeSupabaseReport);
+  } catch (error) {
+    throw error;
   }
 }
 
@@ -67,13 +63,13 @@ export async function loadReportFromSupabase(id: string): Promise<CivicReport | 
       .eq("id", id)
       .maybeSingle();
 
-    if (error || !data) {
-      return getMockReportById(id) ?? null;
+    if (error) {
+      throw error;
     }
 
-    return normalizeSupabaseReport(data);
-  } catch {
-    return getMockReportById(id) ?? null;
+    return data ? normalizeSupabaseReport(data) : null;
+  } catch (error) {
+    throw error;
   }
 }
 

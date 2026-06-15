@@ -48,6 +48,73 @@ The platform then turns that simple input into structured maintenance data:
 - Generate a professional maintenance report
 - Prioritize what should be addressed first
 
+## Priority Scoring System
+
+CivicLens uses an explainable 0-100 priority score so agencies can see why one
+report ranks above another. The ranking is transparent and rule-based, not a
+pure black-box AI decision.
+
+```txt
+Priority Score =
+Severity Score + Authenticity Contribution + Duplicate Contribution + Location Impact Contribution
+```
+
+Weights:
+
+- Severity, max 60: low = 10, medium = 25, high = 45, critical = 60.
+  Safety risk matters most.
+- Authenticity, max 15: `authenticity_score * 0.15`.
+  Trustworthy reports rank higher, but authenticity does not overpower safety.
+- Duplicates, max 15: `Math.min(duplicate_count * 3, 15)`.
+  Repeated citizen reports suggest wider impact, capped so duplicates do not
+  outrank critical hazards by themselves.
+- Location Impact, max 10: estimated from report description, location text,
+  category, and the `congestion_impact` field.
+  CivicLens labels this in the UI as "Location Impact" or
+  "Congestion / Location Impact".
+
+Location impact currently uses text and location keywords, not live traffic
+data. Examples include MRT/train station, hospital, expressway, school zone,
+bus stop, pedestrian crossing, mall, market, HDB, carpark, park, walkway, side
+road, and similar civic context clues. Future improvements can plug in
+geocoding, map data, footfall estimates, public transport proximity, or
+government GIS layers.
+
+## Reka AI Analysis
+
+Reka is used server-side only. The browser calls
+`POST /api/reports/[id]/analyze`, and the Next.js API route reads
+`REKA_API_KEY` from the server environment. The key is never exposed to client
+components.
+
+The agency/admin AI analysis route sends the report media and text context to
+Reka:
+
+- `media_url`
+- `media_type`
+- `description`
+- `location_text`
+- `category`
+
+Reka returns structured report fields:
+
+- `issue_type`
+- `severity`
+- `authenticity_score`
+- `congestion_impact` / location impact label
+- `recommended_action`
+- `ai_summary`
+
+The backend validates and sanitizes the response before saving it. Severity must
+be one of `low`, `medium`, `high`, or `critical`; authenticity is clamped to
+0-100; and all text fields have safe fallback values. If `REKA_API_KEY` is not
+configured, CivicLens uses an isolated mock analysis fallback so hackathon demos
+can still run.
+
+Reka does not directly decide `priority_score`. After AI fields are generated,
+the backend recalculates priority with `lib/priority.ts`, keeping the final
+agency ranking transparent and explainable.
+
 ## System Architecture
 ![CivicLens System Architecture](docs/architecture.png)
 
@@ -60,11 +127,11 @@ The repository now includes the MVP skeleton for:
 - Landing page at `/`
 - Submit page at `/submit`
 - Dashboard page at `/dashboard`
-- Report details page at `/reports/[id]`
+- Agency report details page at `/report/[id]`
+- Citizen confirmation page at `/report/[id]/result`
 - Shared navigation and reusable report components
-- Mock data for dashboard and details screens
-
-This base scaffold does not include real backend integration yet.
+- Supabase-backed auth, report submission, storage, dashboard, map, and details screens
+- Server-side Reka AI analysis for agency/admin report review
 
 ## Getting Started
 
@@ -82,15 +149,24 @@ npm run dev
 
 3. Open `http://localhost:3000`
 
+## MVP Account Roles
+
+Public signup always creates a `profiles` row with `role = 'citizen'`.
+For the MVP, agency/admin accounts are created by signing up normally, then
+manually changing `profiles.role` from `citizen` to `agency` or `admin` in
+Supabase.
+
 ## Starter Structure
 
 ```txt
 app/
   dashboard/
     page.tsx
-  reports/
+  report/
     [id]/
       page.tsx
+      result/
+        page.tsx
   submit/
     page.tsx
   globals.css
@@ -102,11 +178,12 @@ components/
   ReportForm.tsx
   SeverityBadge.tsx
 lib/
-  mockReports.ts
+  priority.ts
+  reports.ts
+  supabase.ts
 ```
 
 ## Next Steps
 
-- Add real form handling
-- Introduce backend routes when the UI flow is stable
-- Connect persistent storage after the base experience feels right
+- Improve location impact with map/geocoding, footfall, transport, or GIS data
+- Add richer agency assignment workflows
