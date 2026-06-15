@@ -80,8 +80,12 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          description?: string | null;
+          short_description?: string;
+          location_text?: string;
           status?: Database["public"]["Enums"]["report_status"];
           severity?: Database["public"]["Enums"]["report_severity"];
+          authenticity_score?: number;
           priority_score?: number;
           recommended_action?: string;
           ai_summary?: string;

@@ -172,7 +172,7 @@ function ReportResult({ reportId }: { reportId: string }) {
               <Fact icon={Tag} label="Issue type" value={report.issueType} />
               <Fact icon={ShieldCheck} label="Authenticity score" value={`${report.auth}%`} />
               <Fact icon={Copy} label="Duplicate count" value={String(report.dupes)} />
-              <Fact icon={Activity} label="Congestion impact" value={report.congestion} />
+              <Fact icon={Activity} label="Congestion / Location Impact" value={report.congestion} />
               <Fact icon={Gauge} label="Priority score" value={`${report.priority} / 100`} />
             </div>
           </Card>

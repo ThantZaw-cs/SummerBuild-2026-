@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { createSupabaseClient } from "@/lib/supabase";
 import { ensureUserProfile } from "@/lib/auth";
-import type { Database } from "@/lib/supabaseTypes";
+import {
+  getPriorityScoreBreakdown,
+  isPendingLocationImpact
+} from "@/lib/priority";
+import { analyzeReportWithReka } from "@/lib/reka";
 
 type ReportRequest = {
   description?: string;
@@ -9,16 +13,6 @@ type ReportRequest = {
   media_url?: string;
   media_type?: "image" | "video";
   category?: string | null;
-};
-
-type RekaAnalysis = {
-  issue_type: string;
-  severity: Database["public"]["Enums"]["report_severity"];
-  authenticity_score: number;
-  ai_summary: string;
-  recommended_action: string;
-  priority_score: number;
-  congestion_impact: string;
 };
 
 export async function POST(request: Request) {
@@ -55,13 +49,26 @@ export async function POST(request: Request) {
 
     const profile = await ensureUserProfile(supabase, user);
 
-    const analysis = await analyzeWithReka({
+    const analysis = await analyzeReportWithReka({
       description,
       locationText,
       mediaUrl,
       mediaType,
-      categoryHint: category
+      category,
+      congestionImpact: null
     });
+    const priorityBreakdown = getPriorityScoreBreakdown({
+      severity: analysis.severity,
+      authenticityScore: analysis.authenticity_score,
+      duplicateCount: 0,
+      description,
+      locationText,
+      category,
+      congestionImpact: analysis.congestion_impact
+    });
+    const congestionImpact = isPendingLocationImpact(analysis.congestion_impact)
+      ? priorityBreakdown.locationImpactLabel
+      : analysis.congestion_impact;
 
     const { data, error } = await supabase
       .from("reports")
@@ -80,8 +87,8 @@ export async function POST(request: Request) {
         authenticity_score: analysis.authenticity_score,
         ai_summary: analysis.ai_summary,
         recommended_action: analysis.recommended_action,
-        priority_score: analysis.priority_score,
-        congestion_impact: analysis.congestion_impact,
+        priority_score: priorityBreakdown.finalScore,
+        congestion_impact: congestionImpact,
         duplicate_count: 0,
         status: "pending_review"
       })
@@ -114,111 +121,4 @@ function getBearerToken(request: Request) {
   }
 
   return authorization.slice("bearer ".length).trim();
-}
-
-async function analyzeWithReka({
-  description,
-  locationText,
-  mediaUrl,
-  mediaType,
-  categoryHint
-}: {
-  description: string;
-  locationText: string;
-  mediaUrl: string;
-  mediaType: "image" | "video";
-  categoryHint: string | null;
-}): Promise<RekaAnalysis> {
-  const apiKey = process.env.REKA_API_KEY;
-  const apiUrl = process.env.REKA_API_URL ?? "https://api.reka.ai/v1/chat/completions";
-  const model = process.env.REKA_MODEL ?? "reka-flash";
-
-  if (!apiKey) {
-    throw new Error("Missing REKA_API_KEY environment variable.");
-  }
-
-  const prompt = [
-    "Analyze this civic infrastructure report and return JSON only.",
-    "The JSON shape must be:",
-    "{\"issue_type\":\"string\",\"severity\":\"low|medium|high|critical\",\"authenticity_score\":0-100,\"ai_summary\":\"string\",\"recommended_action\":\"string\",\"priority_score\":0-100,\"congestion_impact\":\"string\"}",
-    `Description: ${description}`,
-    `Location: ${locationText}`,
-    categoryHint ? `Citizen category hint: ${categoryHint}` : null,
-    `Media type: ${mediaType}`
-  ]
-    .filter(Boolean)
-    .join("\n");
-
-  const response = await fetch(apiUrl, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: prompt },
-            { type: "image_url", image_url: { url: mediaUrl } }
-          ]
-        }
-      ],
-      response_format: { type: "json_object" }
-    })
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Reka API request failed: ${errorText || response.statusText}`);
-  }
-
-  const payload = await response.json();
-  const content =
-    payload?.choices?.[0]?.message?.content ??
-    payload?.output_text ??
-    payload?.text ??
-    payload;
-  const parsed = typeof content === "string" ? JSON.parse(content) : content;
-
-  return normalizeRekaAnalysis(parsed);
-}
-
-function normalizeRekaAnalysis(value: Partial<RekaAnalysis>): RekaAnalysis {
-  return {
-    issue_type: String(value.issue_type ?? "Submitted Report"),
-    severity: normalizeSeverity(value.severity),
-    authenticity_score: clampScore(value.authenticity_score),
-    ai_summary: String(value.ai_summary ?? "AI summary unavailable."),
-    recommended_action: String(value.recommended_action ?? "Review and route to the appropriate maintenance team."),
-    priority_score: clampScore(value.priority_score),
-    congestion_impact: String(value.congestion_impact ?? "Pending analysis")
-  };
-}
-
-function normalizeSeverity(value: unknown): RekaAnalysis["severity"] {
-  const normalized = String(value ?? "").toLowerCase();
-
-  if (
-    normalized === "critical" ||
-    normalized === "high" ||
-    normalized === "medium" ||
-    normalized === "low"
-  ) {
-    return normalized;
-  }
-
-  return "low";
-}
-
-function clampScore(value: unknown) {
-  const numberValue = Number(value);
-
-  if (!Number.isFinite(numberValue)) {
-    return 0;
-  }
-
-  return Math.max(0, Math.min(100, Math.round(numberValue)));
 }

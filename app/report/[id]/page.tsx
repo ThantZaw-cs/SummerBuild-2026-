@@ -24,6 +24,11 @@ import {
 import { AuthGate } from "@/components/AuthGate";
 import { SeverityBadge } from "@/components/Badges";
 import { fetchUserProfile } from "@/lib/auth";
+import {
+  getPriorityScoreBreakdown,
+  isPendingLocationImpact,
+  type PriorityScoreBreakdown
+} from "@/lib/priority";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import {
   displayToSupabaseStatus,
@@ -39,20 +44,30 @@ import {
   type CivicReport,
   type DisplayStatus,
   type ReportNote,
+  type ReportRow,
   type Severity,
   type SupabaseStatus
 } from "@/lib/reports";
 
 type ReportEditDraft = {
   severity: Severity;
-  priorityScore: string;
+  authenticityScore: string;
   recommendedAction: string;
   aiSummary: string;
   duplicateCount: string;
   congestionImpact: string;
   issueType: string;
   category: string;
+  description: string;
+  locationText: string;
   internalNotes: string;
+};
+
+type AnalyzeResponse = {
+  report?: ReportRow;
+  usedFallback?: boolean;
+  note?: string;
+  error?: string;
 };
 
 const SEVERITY_OPTIONS: Severity[] = ["low", "medium", "high", "critical"];
@@ -76,8 +91,10 @@ function ReportDetail({ reportId }: { reportId: string }) {
   const [draft, setDraft] = useState("");
   const [editDraft, setEditDraft] = useState<ReportEditDraft | null>(null);
   const [canEdit, setCanEdit] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
+  const [messageTone, setMessageTone] = useState<"success" | "error" | null>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -158,6 +175,7 @@ function ReportDetail({ reportId }: { reportId: string }) {
     }
 
     setMessage(null);
+    setMessageTone(null);
 
     try {
       const supabase = getSupabaseBrowserClient();
@@ -185,6 +203,7 @@ function ReportDetail({ reportId }: { reportId: string }) {
         }
       ]);
     } catch (error) {
+      setMessageTone("error");
       setMessage(
         error instanceof Error ? error.message : "Unable to update report status."
       );
@@ -196,6 +215,7 @@ function ReportDetail({ reportId }: { reportId: string }) {
     if (!text) return;
     if (report) {
       try {
+        setMessageTone(null);
         const existingNotes = editDraft?.internalNotes.trim() ?? "";
         const nextNotes = existingNotes ? `${existingNotes}\n${text}` : text;
         const supabase = getSupabaseBrowserClient();
@@ -216,6 +236,7 @@ function ReportDetail({ reportId }: { reportId: string }) {
           current ? { ...current, internalNotes: nextNotes } : current
         );
       } catch (error) {
+        setMessageTone("error");
         setMessage(
           error instanceof Error ? error.message : "Unable to save internal note."
         );
@@ -232,8 +253,9 @@ function ReportDetail({ reportId }: { reportId: string }) {
     }
 
     setMessage(null);
+    setMessageTone(null);
 
-    const nextPriority = clampNumber(editDraft.priorityScore, 0, 100, report.priority);
+    const nextAuthenticity = clampNumber(editDraft.authenticityScore, 0, 100, report.auth);
     const nextDuplicateCount = clampNumber(editDraft.duplicateCount, 0, 9999, report.dupes);
     const nextInternalNotes = editDraft.internalNotes.trim();
     const nextRecommendedAction =
@@ -245,18 +267,36 @@ function ReportDetail({ reportId }: { reportId: string }) {
       editDraft.congestionImpact.trim() || "Pending analysis";
     const nextIssueType = editDraft.issueType.trim() || "Analysis pending";
     const nextCategory = editDraft.category.trim() || null;
+    const nextDescription = editDraft.description.trim() || report.desc;
+    const nextLocationText = editDraft.locationText.trim() || report.location;
+    const priorityBreakdown = getPriorityScoreBreakdown({
+      severity: editDraft.severity,
+      authenticityScore: nextAuthenticity,
+      duplicateCount: nextDuplicateCount,
+      description: nextDescription,
+      locationText: nextLocationText,
+      category: nextCategory,
+      congestionImpact: nextCongestionImpact
+    });
+    const savedCongestionImpact = isPendingLocationImpact(nextCongestionImpact)
+      ? priorityBreakdown.locationImpactLabel
+      : nextCongestionImpact;
 
     try {
       const supabase = getSupabaseBrowserClient();
       const { error } = await supabase
         .from("reports")
         .update({
+          description: nextDescription,
+          short_description: nextDescription,
+          location_text: nextLocationText,
           severity: editDraft.severity,
-          priority_score: nextPriority,
+          authenticity_score: nextAuthenticity,
+          priority_score: priorityBreakdown.finalScore,
           recommended_action: nextRecommendedAction,
           ai_summary: nextAiSummary,
           duplicate_count: nextDuplicateCount,
-          congestion_impact: nextCongestionImpact,
+          congestion_impact: savedCongestionImpact,
           issue_type: nextIssueType,
           category: nextCategory,
           internal_notes: nextInternalNotes || null
@@ -289,12 +329,15 @@ function ReportDetail({ reportId }: { reportId: string }) {
         current
           ? {
               ...current,
+              desc: nextDescription,
+              location: nextLocationText,
               severity: editDraft.severity,
-              priority: nextPriority,
+              auth: nextAuthenticity,
+              priority: priorityBreakdown.finalScore,
               action: nextRecommendedAction,
               summary: nextAiSummary,
               dupes: nextDuplicateCount,
-              congestion: nextCongestionImpact,
+              congestion: savedCongestionImpact,
               issueType: nextIssueType,
               category: nextCategory || "Other",
               internalNotes: nextInternalNotes
@@ -303,19 +346,80 @@ function ReportDetail({ reportId }: { reportId: string }) {
       );
       setEditDraft({
         severity: editDraft.severity,
-        priorityScore: String(nextPriority),
+        authenticityScore: String(nextAuthenticity),
         recommendedAction: nextRecommendedAction,
         aiSummary: nextAiSummary,
         duplicateCount: String(nextDuplicateCount),
-        congestionImpact: nextCongestionImpact,
+        congestionImpact: savedCongestionImpact,
         issueType: nextIssueType,
         category: nextCategory ?? "",
+        description: nextDescription,
+        locationText: nextLocationText,
         internalNotes: nextInternalNotes
       });
     } catch (error) {
+      setMessageTone("error");
       setMessage(
         error instanceof Error ? error.message : "Unable to save report details."
       );
+    }
+  }
+
+  async function runAiAnalysis() {
+    if (!report || !canEdit) {
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setMessage(null);
+    setMessageTone(null);
+
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+
+      if (!accessToken) {
+        throw new Error("Your session expired. Please log in again.");
+      }
+
+      const response = await fetch(`/api/reports/${report.id}/analyze`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
+      });
+      const payload = (await response.json()) as AnalyzeResponse;
+
+      if (!response.ok || !payload.report) {
+        throw new Error(payload.error ?? "Unable to run AI analysis.");
+      }
+
+      const normalized = normalizeSupabaseReport(payload.report);
+      setReport(normalized);
+      setStatus(normalized.status);
+      setEditDraft(createEditDraft(normalized));
+      setExtra((prev) => [
+        ...prev,
+        {
+          author: "You",
+          text: payload.note ?? "AI analysis generated",
+          time: new Date().toISOString()
+        }
+      ]);
+      setMessage(
+        payload.usedFallback
+          ? "Mock AI analysis generated because REKA_API_KEY is not configured."
+          : "AI analysis generated."
+      );
+      setMessageTone("success");
+    } catch (error) {
+      setMessageTone("error");
+      setMessage(
+        error instanceof Error ? error.message : "Unable to run AI analysis."
+      );
+    } finally {
+      setIsAnalyzing(false);
     }
   }
 
@@ -344,10 +448,19 @@ function ReportDetail({ reportId }: { reportId: string }) {
   }
 
   const current = status ?? report.status;
+  const priorityBreakdown = getPriorityScoreBreakdown({
+    severity: report.severity,
+    authenticityScore: report.auth,
+    duplicateCount: report.dupes,
+    description: report.desc,
+    locationText: report.location,
+    category: report.category,
+    congestionImpact: report.congestion
+  });
   const analysis = [
     { label: "Authenticity", value: `${report.auth}%`, icon: ShieldCheck, hint: "AI confidence" },
     { label: "Duplicates", value: String(report.dupes), icon: Copy, hint: "merged nearby" },
-    { label: "Congestion", value: report.congestion, icon: Activity, hint: "traffic impact" },
+    { label: "Location Impact", value: report.congestion, icon: Activity, hint: "text estimate" },
     { label: "Priority", value: String(report.priority), icon: Gauge, hint: "of 100" }
   ];
 
@@ -372,7 +485,13 @@ function ReportDetail({ reportId }: { reportId: string }) {
       </div>
 
       {message ? (
-        <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <p
+          className={`mb-4 rounded-lg border px-4 py-3 text-sm ${
+            messageTone === "success"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border-red-200 bg-red-50 text-red-700"
+          }`}
+        >
           {message}
         </p>
       ) : null}
@@ -424,7 +543,11 @@ function ReportDetail({ reportId }: { reportId: string }) {
               <div className="h-2 overflow-hidden rounded-full bg-slate-100">
                 <div className={`h-full rounded-full ${severityStyles[report.severity].dot}`} style={{ width: `${report.priority}%` }} />
               </div>
+              <p className="mt-2 text-[12.5px] leading-relaxed text-slate-400">
+                {priorityBreakdown.explanation}
+              </p>
             </div>
+            <PriorityBreakdownCard breakdown={priorityBreakdown} />
           </Card>
 
           <div className="rounded-2xl border border-[#F0D7C3] bg-[#FCF6F1] p-6">
@@ -436,6 +559,27 @@ function ReportDetail({ reportId }: { reportId: string }) {
         </div>
 
         <div className="flex flex-col gap-5">
+          {canEdit ? (
+            <Card>
+              <h2 className="mb-3.5 flex items-center gap-2 text-[15px] font-bold text-ink">
+                <Sparkles className="h-[16px] w-[16px] text-primary" />
+                AI analysis
+              </h2>
+              <button
+                onClick={runAiAnalysis}
+                disabled={isAnalyzing}
+                className="inline-flex w-full items-center justify-center gap-1.5 rounded-[10px] bg-primary py-2.5 text-[13.5px] font-semibold text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Sparkles className="h-[15px] w-[15px]" />
+                {isAnalyzing ? "Running AI Analysis..." : "Run AI Analysis"}
+              </button>
+              <p className="mt-3 text-[12.5px] leading-relaxed text-slate-400">
+                Generates issue type, severity, authenticity, location impact,
+                recommended action, and maintenance summary.
+              </p>
+            </Card>
+          ) : null}
+
           {canEdit ? (
             <Card>
               <h2 className="mb-3.5 text-[15px] font-bold text-ink">Update status</h2>
@@ -485,15 +629,37 @@ function ReportDetail({ reportId }: { reportId: string }) {
                     ))}
                   </select>
                 </Field>
-                <Field label="Priority score">
+                <Field label="Authenticity score">
                   <input
                     type="number"
                     min={0}
                     max={100}
-                    value={editDraft.priorityScore}
+                    value={editDraft.authenticityScore}
                     onChange={(event) =>
                       setEditDraft((current) =>
-                        current ? { ...current, priorityScore: event.target.value } : current
+                        current ? { ...current, authenticityScore: event.target.value } : current
+                      )
+                    }
+                    className="w-full rounded-[10px] border border-slate-300 px-3 py-2 text-[13.5px] text-ink outline-none"
+                  />
+                </Field>
+                <Field label="Description">
+                  <textarea
+                    value={editDraft.description}
+                    onChange={(event) =>
+                      setEditDraft((current) =>
+                        current ? { ...current, description: event.target.value } : current
+                      )
+                    }
+                    className="min-h-[72px] w-full resize-y rounded-[10px] border border-slate-300 p-2.5 text-[13.5px] leading-relaxed text-ink outline-none"
+                  />
+                </Field>
+                <Field label="Location">
+                  <input
+                    value={editDraft.locationText}
+                    onChange={(event) =>
+                      setEditDraft((current) =>
+                        current ? { ...current, locationText: event.target.value } : current
                       )
                     }
                     className="w-full rounded-[10px] border border-slate-300 px-3 py-2 text-[13.5px] text-ink outline-none"
@@ -534,7 +700,7 @@ function ReportDetail({ reportId }: { reportId: string }) {
                     className="w-full rounded-[10px] border border-slate-300 px-3 py-2 text-[13.5px] text-ink outline-none"
                   />
                 </Field>
-                <Field label="Congestion impact">
+                <Field label="Congestion / Location Impact">
                   <input
                     value={editDraft.congestionImpact}
                     onChange={(event) =>
@@ -648,13 +814,15 @@ function dotFor(status: DisplayStatus) {
 function createEditDraft(report: CivicReport): ReportEditDraft {
   return {
     severity: report.severity,
-    priorityScore: String(report.priority),
+    authenticityScore: String(report.auth),
     recommendedAction: report.action,
     aiSummary: report.summary,
     duplicateCount: String(report.dupes),
     congestionImpact: report.congestion,
     issueType: report.issueType,
     category: report.category,
+    description: report.desc,
+    locationText: report.location,
     internalNotes: report.internalNotes
   };
 }
@@ -714,6 +882,48 @@ function Fact({ icon: Icon, label, value }: { icon: React.ComponentType<{ classN
         <div className="text-xs text-slate-400">{label}</div>
         <div className="text-sm font-medium text-ink">{value}</div>
       </div>
+    </div>
+  );
+}
+
+function PriorityBreakdownCard({
+  breakdown
+}: {
+  breakdown: PriorityScoreBreakdown;
+}) {
+  const rows = [
+    { label: "Severity", value: breakdown.severityScore, max: 60 },
+    { label: "Authenticity", value: breakdown.authenticityContribution, max: 15 },
+    { label: "Duplicates", value: breakdown.duplicateContribution, max: 15 },
+    { label: "Location Impact", value: breakdown.locationImpactContribution, max: 10 }
+  ];
+
+  return (
+    <div className="mt-4 rounded-xl border border-line bg-[#FBFCFD] p-3.5">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h3 className="text-[13px] font-bold text-ink">Priority breakdown</h3>
+        <span className="text-[12px] font-semibold text-slate-400">
+          {breakdown.finalScore} / 100
+        </span>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {rows.map((row) => (
+          <div key={row.label} className="rounded-lg border border-line bg-white px-3 py-2">
+            <div className="flex justify-between text-[12px] text-slate-500">
+              <span>{row.label}</span>
+              <span className="font-semibold text-ink">
+                {row.value} / {row.max}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 text-[12px] leading-relaxed text-slate-400">
+        {breakdown.locationImpactLabel}
+        {breakdown.matchedLocationKeywords.length > 0
+          ? ` from: ${breakdown.matchedLocationKeywords.join(", ")}`
+          : ""}
+      </p>
     </div>
   );
 }
