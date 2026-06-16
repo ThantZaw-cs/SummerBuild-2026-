@@ -49,6 +49,8 @@ The platform then turns that simple input into structured maintenance data:
 - Generate a professional maintenance report
 - Prioritize what should be addressed first
 
+> CivicLens is not designed to replace existing platforms such as OneService. Instead, it explores an AI-assisted layer for civic reporting: helping citizens submit simpler reports while helping agencies convert those reports into structured, prioritised maintenance cases.
+
 ## Priority Scoring System
 
 CivicLens uses an explainable 0-100 priority score so agencies can see why one
