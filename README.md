@@ -163,22 +163,22 @@ The repository now includes the MVP skeleton for:
 - Server-side Reka AI analysis for agency/admin report review
 - Leaflet-based map picker and agency map view with real report coordinates
 
-## Getting Started
+## Live Demo
 
-1. Install dependencies:
+CivicLens is deployed on Vercel:
 
-```bash
-npm install
-```
+https://civic-lens-delta.vercel.app/
 
-2. Start the development server:
+The deployed app connects to Supabase for authentication, report storage, media uploads, map data, and role-based access. Reka AI analysis runs through server-side Next.js API routes, so API keys are not exposed to the browser.
 
-```bash
-npm run dev
-```
+## Demo Flow
 
-3. Open `http://localhost:3000`
-
+1. A citizen signs up or logs in.
+2. The citizen submits a report with media, location, and description.
+3. The report is saved as `Pending Review`.
+4. An agency/admin user opens the dashboard and clicks `Analyze pending`.
+5. CivicLens runs AI-assisted analysis, estimates severity, recommends an agency, detects likely duplicates, calculates priority, and marks analyzed reports as `Verified`.
+6. The agency can then assign, update, and track the report through resolution.
 ## MVP Account Roles
 
 Public signup always creates a `profiles` row with `role = 'citizen'`.
