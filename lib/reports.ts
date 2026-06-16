@@ -29,6 +29,7 @@ export type CivicReport = {
   location: string;
   lat: number;
   lng: number;
+  hasCoordinates: boolean;
   severity: Severity;
   status: DisplayStatus;
   auth: number;
@@ -122,7 +123,6 @@ export const statusColors: Record<DisplayStatus, string> = {
 
 export const STATUS_ORDER: DisplayStatus[] = [
   "Pending Review",
-  "Under Review",
   "Verified",
   "Assigned",
   "In Progress",
@@ -162,16 +162,23 @@ const fallbackImage =
 
 export function normalizeSupabaseReport(row: ReportRow): CivicReport {
   const issueType = row.issue_type || "Analysis pending";
+  const title =
+    row.title && !isPlaceholderTitle(row.title)
+      ? row.title
+      : issueType === "Analysis pending"
+        ? "Submitted infrastructure report"
+        : issueType;
 
   return {
     id: row.id,
-    title: row.title || (issueType === "Analysis pending" ? "Submitted infrastructure report" : issueType),
+    title,
     desc: row.description || row.short_description,
     issueType,
     category: row.category || inferCategory(issueType),
     location: row.location_text,
     lat: row.latitude ?? 1.304,
     lng: row.longitude ?? 103.8318,
+    hasCoordinates: row.latitude !== null && row.longitude !== null,
     severity: row.severity,
     status: supabaseToDisplayStatus[row.status],
     auth: Math.round(Number(row.authenticity_score ?? 0)),
@@ -199,6 +206,12 @@ export function normalizeSupabaseReport(row: ReportRow): CivicReport {
       }
     ]
   };
+}
+
+function isPlaceholderTitle(title: string) {
+  const normalized = title.trim().toLowerCase();
+
+  return normalized === "pending ai analysis" || normalized === "submitted report";
 }
 
 export function normalizeActivityLog(row: ActivityLogRow): ReportNote {

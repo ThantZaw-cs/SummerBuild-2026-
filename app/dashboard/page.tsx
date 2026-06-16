@@ -9,6 +9,7 @@ import {
   Inbox,
   Search,
   SearchX,
+  Sparkles,
   Wrench
 } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
@@ -43,7 +44,10 @@ function DashboardContent() {
   const [status, setStatus] = useState<DisplayStatus | "All">("All");
   const [reports, setReports] = useState<CivicReport[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAnalyzingPending, setIsAnalyzingPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [bulkMessage, setBulkMessage] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     let isActive = true;
@@ -111,7 +115,7 @@ function DashboardContent() {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [reloadToken]);
 
   const rows = useMemo(() => {
     let list = sortByPriority(reports);
@@ -132,6 +136,7 @@ function DashboardContent() {
   ).length;
   const inProgress = reports.filter((item) => item.status === "In Progress").length;
   const resolved = reports.filter((item) => item.status === "Resolved").length;
+  const pendingReview = reports.filter((item) => item.status === "Pending Review").length;
 
   const statCards = [
     { label: "Total reports", value: String(reports.length), sub: `${active} active`, icon: Inbox, color: "bg-primary-soft text-primary" },
@@ -147,6 +152,55 @@ function DashboardContent() {
 
   const GRID = "grid-cols-[104px_1fr_168px_104px_124px_128px_26px]";
 
+  async function analyzePendingReports() {
+    setIsAnalyzingPending(true);
+    setBulkMessage(null);
+
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+
+      if (!accessToken) {
+        throw new Error("Your session expired. Please log in again.");
+      }
+
+      const response = await fetch("/api/reports/analyze-pending", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
+      });
+      const payload = (await response.json()) as {
+        total?: number;
+        analyzed?: number;
+        failed?: number;
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Unable to analyze pending reports.");
+      }
+
+      setBulkMessage(
+        payload.total === 0
+          ? "No pending reports need AI analysis."
+          : `AI analyzed ${payload.analyzed ?? 0} of ${payload.total} pending report${
+              payload.total === 1 ? "" : "s"
+            }${payload.failed ? `; ${payload.failed} failed` : ""}.`
+      );
+      setReloadToken((value) => value + 1);
+    } catch (error) {
+      setBulkMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to analyze pending reports."
+      );
+    } finally {
+      setIsAnalyzingPending(false);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-6xl px-6 pb-20 pt-9">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3.5">
@@ -154,11 +208,26 @@ function DashboardContent() {
           <h1 className="text-[28px] font-extrabold tracking-tight text-ink">Agency dashboard</h1>
           <p className="mt-1.5 text-[15px] text-slate-500">Every citizen report, triaged and ranked by priority.</p>
         </div>
+        <button
+          type="button"
+          onClick={analyzePendingReports}
+          disabled={isAnalyzingPending || pendingReview === 0}
+          className="inline-flex items-center gap-2 rounded-[10px] bg-primary px-3.5 py-2 text-[13px] font-semibold text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-slate-300"
+        >
+          <Sparkles className="h-4 w-4" />
+          {isAnalyzingPending ? "Analyzing pending..." : `Analyze pending (${pendingReview})`}
+        </button>
         <div className="flex items-center gap-2 rounded-[10px] border border-line bg-white px-3.5 py-2 text-[13px] text-slate-500">
           <span className="h-[7px] w-[7px] animate-pulseSoft rounded-full bg-emerald-500" />
           Live · Supabase
         </div>
       </div>
+
+      {bulkMessage ? (
+        <div className="mb-4 rounded-[12px] border border-line bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
+          {bulkMessage}
+        </div>
+      ) : null}
 
       <div className="mb-[22px] grid grid-cols-2 gap-4 lg:grid-cols-4">
         {statCards.map((card) => {

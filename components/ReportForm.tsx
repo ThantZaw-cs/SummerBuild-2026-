@@ -27,6 +27,7 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { ReportMap } from "@/components/ReportMap";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 
 const steps = [
@@ -45,6 +46,18 @@ const categories = [
   "Other"
 ];
 
+const singaporeCenter = { lat: 1.3521, lng: 103.8198 };
+
+type GeocodeResponse = {
+  result?: {
+    lat: number;
+    lng: number;
+    label?: string;
+    address?: string | null;
+  } | null;
+  error?: string;
+};
+
 export function ReportForm() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
@@ -53,6 +66,11 @@ export function ReportForm() {
   const [uploadedMediaUrl, setUploadedMediaUrl] = useState<string | null>(null);
   const [uploadedMediaType, setUploadedMediaType] = useState<"image" | "video">("image");
   const [location, setLocation] = useState("");
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+  const [mapCenter, setMapCenter] = useState(singaporeCenter);
+  const [locationLookupMessage, setLocationLookupMessage] = useState<string | null>(null);
+  const [isGeocoding, setIsGeocoding] = useState(false);
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -66,6 +84,74 @@ export function ReportForm() {
       }
     };
   }, [previewUrl]);
+
+  useEffect(() => {
+    if (currentStep !== 2) {
+      return;
+    }
+
+    const query = location.trim();
+
+    if (!query) {
+      setLocationLookupMessage(null);
+      return;
+    }
+
+    const typedCoordinates = parseCoordinates(query);
+
+    if (typedCoordinates) {
+      setCoordinates(typedCoordinates);
+      setLocationLookupMessage("Coordinates recognized from your input.");
+      return;
+    }
+
+    if (query.length < 3 || query.toLowerCase() === "current gps location") {
+      return;
+    }
+
+    let isCancelled = false;
+    const timeoutId = window.setTimeout(async () => {
+      setIsGeocoding(true);
+      setLocationLookupMessage("Searching for this location...");
+
+      try {
+        const response = await fetch(`/api/geocode?query=${encodeURIComponent(query)}`);
+        const payload = (await response.json()) as GeocodeResponse;
+
+        if (isCancelled) {
+          return;
+        }
+
+        if (payload.result) {
+          setCoordinates({
+            lat: payload.result.lat,
+            lng: payload.result.lng
+          });
+          setLocationLookupMessage(`Matched: ${payload.result.label ?? "location"}`);
+          return;
+        }
+
+        setLocationLookupMessage(
+          payload.error ?? "No map match found yet. You can click the map to pin it."
+        );
+      } catch {
+        if (!isCancelled) {
+          setLocationLookupMessage(
+            "Unable to search the map right now. You can click the map to pin it."
+          );
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsGeocoding(false);
+        }
+      }
+    }, 700);
+
+    return () => {
+      isCancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [currentStep, location]);
 
   async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -137,6 +223,47 @@ export function ReportForm() {
     setUploadedMediaUrl(null);
   }
 
+  function setCoordinates(position: { lat: number; lng: number }) {
+    const roundedPosition = {
+      lat: roundCoordinate(position.lat),
+      lng: roundCoordinate(position.lng)
+    };
+
+    setLatitude(roundedPosition.lat);
+    setLongitude(roundedPosition.lng);
+    setMapCenter(roundedPosition);
+  }
+
+  function useCurrentLocation() {
+    setMessage(null);
+
+    if (!navigator.geolocation) {
+      setMessage("Your browser does not support location sharing. You can still select a point on the map.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setCoordinates({
+          lat: roundCoordinate(position.coords.latitude),
+          lng: roundCoordinate(position.coords.longitude)
+        });
+        setLocationLookupMessage("Current location selected.");
+
+        if (!location.trim()) {
+          setLocation("Current GPS Location");
+        }
+      },
+      () => {
+        setMessage("Unable to read your current location. You can still select a point on the map.");
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000
+      }
+    );
+  }
+
   function canProceed() {
     if (currentStep === 1) {
       return Boolean(uploadedFile && uploadedMediaUrl && !isUploading);
@@ -192,6 +319,8 @@ export function ReportForm() {
         body: JSON.stringify({
           description,
           location_text: location,
+          latitude,
+          longitude,
           media_url: uploadedMediaUrl,
           media_type: uploadedMediaType,
           category: category || null
@@ -350,7 +479,7 @@ export function ReportForm() {
               Where is the issue?
             </h2>
             <p className="mb-6 text-sm text-muted-foreground">
-              Enter the location or use the map to pin it.
+              Type a location, use GPS, or select a point on the map.
             </p>
 
             <div className="space-y-4">
@@ -370,21 +499,37 @@ export function ReportForm() {
                 </div>
               </div>
 
-              <div className="flex h-48 w-full items-center justify-center rounded-xl border border-border bg-muted">
-                <div className="text-center">
-                  <MapPin className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">Map view</p>
-                  <p className="text-xs text-muted-foreground">
-                    Click to pin location
-                  </p>
-                </div>
+              <ReportMap
+                className="h-64"
+                center={mapCenter}
+                zoom={12}
+                selectedPosition={
+                  latitude !== null && longitude !== null
+                    ? { lat: latitude, lng: longitude }
+                    : null
+                }
+                onPick={(position) => {
+                  setCoordinates(position);
+                  setLocationLookupMessage("Map pin selected.");
+                }}
+              />
+
+              <div className="rounded-lg border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
+                {latitude !== null && longitude !== null
+                  ? `Selected coordinates: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
+                  : "No coordinates selected yet. Reports without coordinates will still be saved, but they cannot appear as map pins."}
+                {locationLookupMessage ? (
+                  <div className="mt-1">
+                    {isGeocoding ? "Searching map..." : locationLookupMessage}
+                  </div>
+                ) : null}
               </div>
 
               <Button
                 variant="outline"
                 size="sm"
                 className="w-full"
-                onClick={() => setLocation("Current GPS Location")}
+                onClick={useCurrentLocation}
               >
                 <MapPin className="mr-2 h-4 w-4" />
                 Use my current location
@@ -409,7 +554,7 @@ export function ReportForm() {
               Describe the issue
             </h2>
             <p className="mb-6 text-sm text-muted-foreground">
-              A short sentence is all we need - AI handles the rest.
+              Your report is saved for agency review and AI-assisted analysis.
             </p>
 
             <div className="space-y-5">
@@ -427,8 +572,8 @@ export function ReportForm() {
                 <div className="mt-2 flex items-start gap-2 text-xs text-muted-foreground">
                   <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                   <span>
-                    Just write a simple sentence. Our AI will analyze the photo
-                    and generate a full report.
+                    Just write a simple sentence. Your report is saved for
+                    agency review and AI-assisted analysis.
                   </span>
                 </div>
               </div>
@@ -442,7 +587,7 @@ export function ReportForm() {
                 </Label>
                 <Select value={category} onValueChange={setCategory}>
                   <SelectTrigger className="mt-1.5">
-                    <SelectValue placeholder="AI will auto-detect if not selected" />
+                    <SelectValue placeholder="Agency can refine this later" />
                   </SelectTrigger>
                   <SelectContent>
                     {categories.map((cat) => (
@@ -507,4 +652,37 @@ export function ReportForm() {
       ) : null}
     </div>
   );
+}
+
+function roundCoordinate(value: number) {
+  return Math.round(value * 1000000) / 1000000;
+}
+
+function parseCoordinates(value: string) {
+  const match = value
+    .trim()
+    .match(/^(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)$/);
+
+  if (!match) {
+    return null;
+  }
+
+  const lat = Number(match[1]);
+  const lng = Number(match[2]);
+
+  if (
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lng) ||
+    lat < -90 ||
+    lat > 90 ||
+    lng < -180 ||
+    lng > 180
+  ) {
+    return null;
+  }
+
+  return {
+    lat: roundCoordinate(lat),
+    lng: roundCoordinate(lng)
+  };
 }

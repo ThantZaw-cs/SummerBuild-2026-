@@ -21,7 +21,7 @@ import { sortByPriority, reports, severityStyles } from "@/lib/data";
 const steps = [
   { n: "1", icon: Camera, title: "Snap a photo", desc: "Capture the pothole, the dead streetlight, the flooded drain — whatever you see." },
   { n: "2", icon: MapPin, title: "Drop a pin", desc: "Pin the exact spot on the map or let GPS place it for you automatically." },
-  { n: "3", icon: Sparkles, title: "We do the rest", desc: "CivicLens classifies, scores, de-duplicates and routes it to the right agency." },
+  { n: "3", icon: Sparkles, title: "Agency review", desc: "Your report is saved for agency review and AI-assisted analysis." },
 ];
 
 const features = [
