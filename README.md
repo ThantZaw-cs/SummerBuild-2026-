@@ -149,19 +149,21 @@ agency ranking transparent and explainable.
 
 ## Project Status
 
-The repository now includes the MVP skeleton for:
+CivicLens is a working MVP prototype built for SummerBuild 2026. The current version includes:
 
-- Next.js App Router frontend
-- TailwindCSS-based UI
-- Landing page at `/`
-- Submit page at `/submit`
-- Dashboard page at `/dashboard`
-- Agency report details page at `/report/[id]`
-- Citizen confirmation page at `/report/[id]/result`
-- Shared navigation and reusable report components
-- Supabase-backed auth, report submission, storage, dashboard, map, and details screens
-- Server-side Reka AI analysis for agency/admin report review
-- Leaflet-based map picker and agency map view with real report coordinates
+Next.js App Router frontend
+TailwindCSS-based UI
+Landing page at /
+Submit page at /submit
+Dashboard page at /dashboard
+Agency report details page at /report/[id]
+Citizen confirmation page at /report/[id]/result
+Shared navigation and reusable report components
+Supabase-backed authentication, report submission, storage, dashboard, map, and details screens
+Server-side Reka AI analysis for agency/admin report review
+Leaflet-based map picker and agency map view with real report coordinates
+
+The app is deployed on Vercel and demonstrates the full citizen-to-agency reporting flow
 
 ## Live Demo
 
@@ -179,7 +181,8 @@ The deployed app connects to Supabase for authentication, report storage, media 
 4. An agency/admin user opens the dashboard and clicks `Analyze pending`.
 5. CivicLens runs AI-assisted analysis, estimates severity, recommends an agency, detects likely duplicates, calculates priority, and marks analyzed reports as `Verified`.
 6. The agency can then assign, update, and track the report through resolution.
-## MVP Account Roles
+
+## Demo Account Roles
 
 Public signup always creates a `profiles` row with `role = 'citizen'`.
 For the MVP, agency/admin accounts are created by signing up normally, then
