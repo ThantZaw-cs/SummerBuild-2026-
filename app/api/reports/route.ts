@@ -9,6 +9,8 @@ import {
 type ReportRequest = {
   description?: string;
   location_text?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   media_url?: string;
   media_type?: "image" | "video";
   category?: string | null;
@@ -25,6 +27,8 @@ export async function POST(request: Request) {
     const body = (await request.json()) as ReportRequest;
     const description = body.description?.trim();
     const locationText = body.location_text?.trim();
+    const latitude = normalizeCoordinate(body.latitude, -90, 90);
+    const longitude = normalizeCoordinate(body.longitude, -180, 180);
     const mediaUrl = body.media_url?.trim();
     const mediaType = body.media_type ?? "image";
     const category = body.category?.trim() || null;
@@ -71,6 +75,8 @@ export async function POST(request: Request) {
         description,
         category,
         location_text: locationText,
+        latitude,
+        longitude,
         media_url: mediaUrl,
         media_type: mediaType,
         issue_type: analysis.issue_type,
@@ -123,4 +129,18 @@ function createPlaceholderAnalysis() {
     recommended_action: "Awaiting agency review and AI analysis.",
     congestion_impact: "Pending analysis"
   };
+}
+
+function normalizeCoordinate(value: unknown, min: number, max: number) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const numberValue = Number(value);
+
+  if (!Number.isFinite(numberValue) || numberValue < min || numberValue > max) {
+    return null;
+  }
+
+  return numberValue;
 }

@@ -17,6 +17,9 @@ export type RekaReportAnalysis = {
   severity: Database["public"]["Enums"]["report_severity"];
   authenticity_score: number;
   congestion_impact: string;
+  responsible_agency: string;
+  agency_reason: string;
+  routing_confidence: number;
   recommended_action: string;
   ai_summary: string;
   usedFallback: boolean;
@@ -45,11 +48,19 @@ export async function analyzeReportWithReka(
     "{",
     '  "issue_type": "string",',
     '  "severity": "low | medium | high | critical",',
-    '  "authenticity_score": 0,',
-    '  "congestion_impact": "string location impact label",',
+    '  "authenticity_score": 85,',
+    '  "congestion_impact": "High Location Impact",',
+    '  "responsible_agency": "string",',
+    '  "agency_reason": "string",',
+    '  "routing_confidence": 85,',
     '  "recommended_action": "string",',
     '  "ai_summary": "string"',
     "}",
+    "For responsible_agency, recommend the best Singapore agency or routing owner.",
+    "Use agencies such as LTA, PUB, NParks, NEA, HDB / Town Council, SCDF, SPF, or Municipal Services Office.",
+    "For congestion_impact, return one of: Critical Location Impact, High Location Impact, Medium Location Impact, Low Location Impact, Unknown Location Impact.",
+    "routing_confidence must be a number from 1 to 100. Use 0 only if no responsible agency can be inferred.",
+    "Severity guidance: sinkholes, subsidence, ground collapse, bridge collapse, structural collapse, exposed live electrical hazards, gas leaks, fires, and emergency access blockage are critical.",
     `Description: ${context.description}`,
     `Location: ${context.locationText}`,
     context.category ? `Citizen category hint: ${context.category}` : null,
@@ -61,35 +72,44 @@ export async function analyzeReportWithReka(
   const content =
     context.mediaType === "image"
       ? [
-          { type: "text", text: prompt },
-          { type: "image_url", image_url: { url: context.mediaUrl } }
+          { type: "image_url", image_url: { url: context.mediaUrl } },
+          { type: "text", text: prompt }
         ]
-      : [{ type: "text", text: `${prompt}\nVideo URL: ${context.mediaUrl}` }];
+      : [
+          { type: "video_url", video_url: context.mediaUrl },
+          { type: "text", text: prompt }
+        ];
 
   try {
+    const body: Record<string, unknown> = {
+      model,
+      messages: [
+        {
+          role: "user",
+          content
+        }
+      ]
+    };
+
+    if (model.includes("research")) {
+      body.response_format = {
+        type: "json_schema",
+        json_schema: {
+          name: "civiclens_report_analysis",
+          schema: reportAnalysisSchema,
+          strict: true
+        }
+      };
+    }
+
     const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         "X-Api-Key": apiKey,
+        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({
-        model,
-        messages: [
-          {
-            role: "user",
-            content
-          }
-        ],
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "civiclens_report_analysis",
-            schema: reportAnalysisSchema,
-            strict: true
-          }
-        }
-      })
+      body: JSON.stringify(body)
     });
 
     const responseText = await response.text();
@@ -110,7 +130,7 @@ export async function analyzeReportWithReka(
       payload?.text ??
       payload;
     const parsed =
-      typeof rawContent === "string" ? JSON.parse(rawContent) : rawContent;
+      typeof rawContent === "string" ? parseJsonFromText(rawContent) : rawContent;
 
     return {
       ...sanitizeRekaAnalysis(parsed, context),
@@ -135,14 +155,31 @@ export function sanitizeRekaAnalysis(
   value: Partial<RekaReportAnalysis>,
   context: RekaReportContext
 ): Omit<RekaReportAnalysis, "usedFallback" | "fallbackReason"> {
+  const issueType = safeText(value.issue_type, inferIssueType(context), 80);
+  const routing = sanitizeAgencyRouting(value, context, issueType);
+  const recommendedAction = safeText(
+    value.recommended_action,
+    "Review and route to the appropriate maintenance team.",
+    500
+  );
+  const aiSummary = safeText(
+    value.ai_summary,
+    "AI summary unavailable. Agency review is required.",
+    900
+  );
+
+  const severity = forceCriticalHazard(context, issueType)
+    ? "critical"
+    : normalizeSeverity(value.severity);
+
   return {
-    issue_type: safeText(value.issue_type, inferIssueType(context), 80),
-    severity: normalizeSeverity(value.severity),
+    issue_type: issueType,
+    severity,
     authenticity_score: normalizeAuthenticityScore(value.authenticity_score),
     congestion_impact: normalizeLocationImpactLabel(
       value.congestion_impact,
       estimateLocationImpact({
-        severity: normalizeSeverity(value.severity),
+        severity,
         authenticityScore: normalizeAuthenticityScore(value.authenticity_score),
         duplicateCount: 0,
         description: context.description,
@@ -151,16 +188,11 @@ export function sanitizeRekaAnalysis(
         congestionImpact: context.congestionImpact
       }).label
     ),
-    recommended_action: safeText(
-      value.recommended_action,
-      "Review and route to the appropriate maintenance team.",
-      500
-    ),
-    ai_summary: safeText(
-      value.ai_summary,
-      "AI summary unavailable. Agency review is required.",
-      900
-    )
+    responsible_agency: routing.responsible_agency,
+    agency_reason: routing.agency_reason,
+    routing_confidence: routing.routing_confidence,
+    recommended_action: withAgencyRecommendation(recommendedAction, routing),
+    ai_summary: withAgencySummary(aiSummary, routing)
   };
 }
 
@@ -178,16 +210,187 @@ function createMockAnalysis(
     category: context.category,
     congestionImpact: context.congestionImpact
   });
+  const routing = inferAgencyRouting(context, issueType);
 
   return {
     issue_type: issueType,
     severity,
     authenticity_score: context.mediaUrl ? 82 : 60,
     congestion_impact: locationImpact.label,
+    responsible_agency: routing.responsible_agency,
+    agency_reason: routing.agency_reason,
+    routing_confidence: routing.routing_confidence,
     recommended_action:
-      "Inspect the site, verify the hazard, and route the case to the responsible maintenance team.",
-    ai_summary: `Mock AI analysis: ${issueType} reported at ${context.locationText}. The report should be reviewed for safety risk, public access impact, and repair urgency.`
+      withAgencyRecommendation(
+        "Inspect the site, verify the hazard, and route the case to the responsible maintenance team.",
+        routing
+      ),
+    ai_summary: withAgencySummary(
+      `Mock AI analysis: ${issueType} reported at ${context.locationText}. The report should be reviewed for safety risk, public access impact, and repair urgency.`,
+      routing
+    )
   };
+}
+
+type AgencyRouting = Pick<
+  RekaReportAnalysis,
+  "responsible_agency" | "agency_reason" | "routing_confidence"
+>;
+
+function sanitizeAgencyRouting(
+  value: Partial<RekaReportAnalysis>,
+  context: RekaReportContext,
+  issueType: string
+): AgencyRouting {
+  const inferred = inferAgencyRouting(context, issueType);
+  const responsibleAgency = safeText(
+    value.responsible_agency,
+    inferred.responsible_agency,
+    80
+  );
+  const agencyReason = safeText(value.agency_reason, inferred.agency_reason, 220);
+  const aiConfidence =
+    value.routing_confidence === undefined
+      ? inferred.routing_confidence
+      : clampScore(value.routing_confidence);
+  const routingConfidence = aiConfidence > 0 ? aiConfidence : inferred.routing_confidence;
+
+  return {
+    responsible_agency: responsibleAgency,
+    agency_reason: agencyReason,
+    routing_confidence: routingConfidence
+  };
+}
+
+function inferAgencyRouting(
+  context: RekaReportContext,
+  issueType: string
+): AgencyRouting {
+  const text = `${context.description} ${context.locationText} ${context.category ?? ""} ${issueType}`.toLowerCase();
+
+  if (
+    includesAny(text, ["fire", "smoke", "gas leak", "collapse", "emergency", "evacuation"])
+  ) {
+    return {
+      responsible_agency: "SCDF",
+      agency_reason: "The report may involve immediate public safety or emergency response.",
+      routing_confidence: 88
+    };
+  }
+
+  if (includesAny(text, ["crime", "vandal", "assault", "theft", "dangerous driving"])) {
+    return {
+      responsible_agency: "SPF",
+      agency_reason: "The issue appears to involve enforcement or public safety concerns.",
+      routing_confidence: 82
+    };
+  }
+
+  if (
+    includesAny(text, [
+      "drain",
+      "drainage",
+      "flood",
+      "waterway",
+      "canal",
+      "ponding",
+      "sewer"
+    ])
+  ) {
+    return {
+      responsible_agency: "PUB",
+      agency_reason: "The report relates to drainage, flooding, waterways, or water infrastructure.",
+      routing_confidence: 90
+    };
+  }
+
+  if (
+    includesAny(text, ["tree", "branch", "park", "greenery", "grass", "plant", "playground"])
+  ) {
+    return {
+      responsible_agency: "NParks",
+      agency_reason: "The report relates to greenery, parks, trees, or park facilities.",
+      routing_confidence: 86
+    };
+  }
+
+  if (
+    includesAny(text, ["litter", "trash", "rubbish", "bin", "pest", "mosquito", "cleanliness"])
+  ) {
+    return {
+      responsible_agency: "NEA",
+      agency_reason: "The report relates to environmental cleanliness or public health.",
+      routing_confidence: 84
+    };
+  }
+
+  if (
+    includesAny(text, [
+      "road",
+      "pothole",
+      "pavement",
+      "traffic light",
+      "street light",
+      "lamp",
+      "bus stop",
+      "zebra crossing",
+      "pedestrian crossing",
+      "expressway",
+      "highway",
+      "signage"
+    ])
+  ) {
+    return {
+      responsible_agency: "LTA",
+      agency_reason: "The report relates to roads, traffic assets, public transport stops, or street infrastructure.",
+      routing_confidence: 89
+    };
+  }
+
+  if (
+    includesAny(text, [
+      "hdb",
+      "void deck",
+      "residential block",
+      "town council",
+      "lift lobby",
+      "common corridor",
+      "estate",
+      "carpark"
+    ])
+  ) {
+    return {
+      responsible_agency: "HDB / Town Council",
+      agency_reason: "The report appears to involve residential estate or common-area maintenance.",
+      routing_confidence: 78
+    };
+  }
+
+  return {
+    responsible_agency: "Municipal Services Office",
+    agency_reason: "The issue needs cross-agency triage before assignment to a specific owner.",
+    routing_confidence: 60
+  };
+}
+
+function withAgencyRecommendation(action: string, routing: AgencyRouting) {
+  return safeText(
+    `Recommended agency: ${routing.responsible_agency} (${routing.routing_confidence}% confidence). Reason: ${routing.agency_reason} Next action: ${action}`,
+    action,
+    900
+  );
+}
+
+function withAgencySummary(summary: string, routing: AgencyRouting) {
+  return safeText(
+    `${summary}\n\nAgency routing: ${routing.responsible_agency} - ${routing.agency_reason}`,
+    summary,
+    1200
+  );
+}
+
+function includesAny(value: string, keywords: string[]) {
+  return keywords.some((keyword) => value.includes(keyword));
 }
 
 function inferIssueType(context: RekaReportContext) {
@@ -208,12 +411,7 @@ function inferSeverity(
 ): Database["public"]["Enums"]["report_severity"] {
   const text = `${context.description} ${context.locationText} ${context.category ?? ""}`.toLowerCase();
 
-  if (
-    text.includes("danger") ||
-    text.includes("emergency") ||
-    text.includes("hospital") ||
-    text.includes("expressway")
-  ) {
+  if (forceCriticalHazard(context, inferIssueType(context))) {
     return "critical";
   }
 
@@ -231,6 +429,29 @@ function inferSeverity(
   }
 
   return "low";
+}
+
+function forceCriticalHazard(context: RekaReportContext, issueType: string) {
+  const text = `${context.description} ${context.locationText} ${context.category ?? ""} ${issueType}`.toLowerCase();
+
+  return includesAny(text, [
+    "sinkhole",
+    "sink hole",
+    "subsidence",
+    "ground collapse",
+    "road collapse",
+    "structural collapse",
+    "bridge collapse",
+    "collapsed road",
+    "exposed wire",
+    "live wire",
+    "electrical hazard",
+    "gas leak",
+    "fire",
+    "smoke",
+    "emergency",
+    "evacuation"
+  ]);
 }
 
 function normalizeSeverity(
@@ -286,12 +507,42 @@ function normalizeLocationImpactLabel(value: unknown, fallback: string) {
     .toLowerCase()
     .trim();
 
+  if (
+    !normalized ||
+    normalized === "string location impact label" ||
+    normalized === "text estimate" ||
+    normalized === "estimate" ||
+    normalized === "unknown"
+  ) {
+    return fallback;
+  }
+
   if (normalized === "critical") return "Critical Location Impact";
   if (normalized === "high") return "High Location Impact";
   if (normalized === "medium") return "Medium Location Impact";
   if (normalized === "low") return "Low Location Impact";
+  if (normalized.includes("critical")) return "Critical Location Impact";
+  if (normalized.includes("high")) return "High Location Impact";
+  if (normalized.includes("medium")) return "Medium Location Impact";
+  if (normalized.includes("low")) return "Low Location Impact";
 
   return safeText(value, fallback, 80);
+}
+
+function parseJsonFromText(value: string) {
+  const trimmed = value.trim();
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
+
+    if (!jsonMatch) {
+      throw new Error("Reka response did not contain JSON.");
+    }
+
+    return JSON.parse(jsonMatch[0]);
+  }
 }
 
 function getRekaEndpoint() {
@@ -326,6 +577,13 @@ const reportAnalysisSchema = {
       maximum: 100
     },
     congestion_impact: { type: "string" },
+    responsible_agency: { type: "string" },
+    agency_reason: { type: "string" },
+    routing_confidence: {
+      type: "number",
+      minimum: 0,
+      maximum: 100
+    },
     recommended_action: { type: "string" },
     ai_summary: { type: "string" }
   },
@@ -334,6 +592,9 @@ const reportAnalysisSchema = {
     "severity",
     "authenticity_score",
     "congestion_impact",
+    "responsible_agency",
+    "agency_reason",
+    "routing_confidence",
     "recommended_action",
     "ai_summary"
   ]

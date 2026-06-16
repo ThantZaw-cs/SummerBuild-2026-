@@ -38,7 +38,6 @@ import { loadReportFromSupabase, updateReportStatus } from "@/lib/reportQueries"
 
 const statusOptions: DisplayStatus[] = [
   "Pending Review",
-  "Under Review",
   "Verified",
   "Assigned",
   "In Progress",

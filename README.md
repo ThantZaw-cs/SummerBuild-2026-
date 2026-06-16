@@ -45,6 +45,7 @@ The platform then turns that simple input into structured maintenance data:
 - Detect likely issue type
 - Estimate severity
 - Score authenticity
+- Recommend the responsible agency
 - Generate a professional maintenance report
 - Prioritize what should be addressed first
 
@@ -80,6 +81,21 @@ road, and similar civic context clues. Future improvements can plug in
 geocoding, map data, footfall estimates, public transport proximity, or
 government GIS layers.
 
+## Map and Location
+
+Reports store both human-readable `location_text` and optional `latitude` /
+`longitude`. The map only plots pins for reports that have real coordinates;
+reports without coordinates still appear in the map sidebar with a "No
+coordinates yet" note.
+
+Citizens can add coordinates during report submission by clicking the map picker
+or using the browser's current location prompt. Coordinates are encouraged for
+map display, but they are not required to submit a report.
+
+Future versions can add geocoding with OneMap, Google Maps, public transport
+proximity, footfall data, or government GIS datasets so typed locations can be
+converted into reliable coordinates automatically.
+
 ## Reka AI Analysis
 
 Reka is used server-side only. The browser calls
@@ -102,6 +118,9 @@ Reka returns structured report fields:
 - `severity`
 - `authenticity_score`
 - `congestion_impact` / location impact label
+- `responsible_agency`
+- `agency_reason`
+- `routing_confidence`
 - `recommended_action`
 - `ai_summary`
 
@@ -110,6 +129,14 @@ be one of `low`, `medium`, `high`, or `critical`; authenticity is clamped to
 0-100; and all text fields have safe fallback values. If `REKA_API_KEY` is not
 configured, CivicLens uses an isolated mock analysis fallback so hackathon demos
 can still run.
+
+For the MVP, agency routing is a recommendation rather than a hard assignment.
+The AI suggests a Singapore routing owner such as LTA, PUB, NParks, NEA,
+HDB / Town Council, SCDF, SPF, or Municipal Services Office. To avoid schema
+churn, the recommendation is saved inside the existing `recommended_action` and
+`ai_summary` fields. A future version can promote this into dedicated
+`responsible_agency`, `agency_reason`, and `routing_confidence` columns for
+filtering and workflow assignment.
 
 Reka does not directly decide `priority_score`. After AI fields are generated,
 the backend recalculates priority with `lib/priority.ts`, keeping the final
@@ -132,6 +159,7 @@ The repository now includes the MVP skeleton for:
 - Shared navigation and reusable report components
 - Supabase-backed auth, report submission, storage, dashboard, map, and details screens
 - Server-side Reka AI analysis for agency/admin report review
+- Leaflet-based map picker and agency map view with real report coordinates
 
 ## Getting Started
 
