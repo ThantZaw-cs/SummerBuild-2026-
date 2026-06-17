@@ -182,6 +182,22 @@ The deployed app connects to Supabase for authentication, report storage, media 
 5. CivicLens runs AI-assisted analysis, estimates severity, recommends an agency, detects likely duplicates, calculates priority, and marks analyzed reports as `Verified`.
 6. The agency can then assign, update, and track the report through resolution.
 
+## Screenshots
+### Landing Page
+![Landing Page](docs/landingpage1.png)
+
+### My Reports
+![My Reports Page](docs/citizen_view.png)
+
+### Report Page
+![Report Page](docs/reportsubmission.png)
+
+### Agency Dashboard
+![Agency Dashboard](docs/agency_dashboard.png)
+
+### Agency Heatmap
+![Agency Heatmap](docs/agency_heatmap.png)
+
 ## Demo Account Roles
 
 Public signup always creates a `profiles` row with `role = 'citizen'`.
