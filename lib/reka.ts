@@ -190,7 +190,7 @@ export async function analyzeReportWithReka(
 export function sanitizeRekaAnalysis(
   value: Partial<RekaReportAnalysis>,
   context: RekaReportContext
-): Omit<RekaReportAnalysis, "usedFallback" | "fallbackReason"> {
+): Omit<RekaReportAnalysis, "usedFallback" | "fallbackReason" | "debugInfo"> {
   const issueType = safeText(value.issue_type, inferIssueType(context), 80);
   const routing = sanitizeAgencyRouting(value, context, issueType);
   const recommendedAction = safeText(
@@ -234,7 +234,7 @@ export function sanitizeRekaAnalysis(
 
 function createMockAnalysis(
   context: RekaReportContext
-): Omit<RekaReportAnalysis, "usedFallback" | "fallbackReason"> {
+): Omit<RekaReportAnalysis, "usedFallback" | "fallbackReason" | "debugInfo"> {
   const issueType = inferIssueType(context);
   const severity = inferSeverity(context);
   const locationImpact = estimateLocationImpact({
