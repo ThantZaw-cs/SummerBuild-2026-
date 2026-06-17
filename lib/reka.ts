@@ -546,12 +546,15 @@ function parseJsonFromText(value: string) {
 }
 
 function getRekaEndpoint() {
-  const baseUrl = (process.env.REKA_API_URL ?? "https://api.reka.ai/v1").replace(
-    /\/+$/,
-    ""
-  );
+  const configuredUrl = (
+    process.env.REKA_API_URL ?? "https://api.reka.ai/v1"
+  ).replace(/\/+$/, "");
 
-  return `${baseUrl}/chat/completions`;
+  if (configuredUrl.endsWith("/chat/completions")) {
+    return configuredUrl;
+  }
+
+  return `${configuredUrl}/chat/completions`;
 }
 
 function logRekaFailure(endpoint: string, status: number, body: string) {
