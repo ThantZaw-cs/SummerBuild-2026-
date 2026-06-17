@@ -24,6 +24,17 @@ export type RekaReportAnalysis = {
   ai_summary: string;
   usedFallback: boolean;
   fallbackReason: "missing_key" | "request_failed" | "invalid_response" | null;
+  debugInfo: RekaDebugInfo | null;
+};
+
+export type RekaDebugInfo = {
+  endpoint: string;
+  model: string;
+  status: number | null;
+  requestId: string | null;
+  errorType: string | null;
+  errorMessage: string | null;
+  mediaHost: string | null;
 };
 
 export async function analyzeReportWithReka(
@@ -36,7 +47,16 @@ export async function analyzeReportWithReka(
     return {
       ...createMockAnalysis(context),
       usedFallback: true,
-      fallbackReason: "missing_key"
+      fallbackReason: "missing_key",
+      debugInfo: {
+        endpoint,
+        model: process.env.REKA_MODEL ?? "reka-flash",
+        status: null,
+        requestId: null,
+        errorType: "missing_key",
+        errorMessage: "REKA_API_KEY is not configured on the server.",
+        mediaHost: getMediaHost(context.mediaUrl)
+      }
     };
   }
 
@@ -115,11 +135,20 @@ export async function analyzeReportWithReka(
     const responseText = await response.text();
 
     if (!response.ok) {
-      logRekaFailure(endpoint, response.status, responseText);
+      const debugInfo = buildRequestFailureDebugInfo({
+        endpoint,
+        model,
+        status: response.status,
+        requestId: response.headers.get("X-Request-ID"),
+        body: responseText,
+        mediaUrl: context.mediaUrl
+      });
+      logRekaFailure(debugInfo);
       return {
         ...createMockAnalysis(context),
         usedFallback: true,
-        fallbackReason: "request_failed"
+        fallbackReason: "request_failed",
+        debugInfo
       };
     }
 
@@ -135,18 +164,25 @@ export async function analyzeReportWithReka(
     return {
       ...sanitizeRekaAnalysis(parsed, context),
       usedFallback: false,
-      fallbackReason: null
+      fallbackReason: null,
+      debugInfo: null
     };
   } catch (error) {
-    console.error("Reka API analysis failed; using mock fallback.", {
+    const debugInfo = buildInvalidResponseDebugInfo({
       endpoint,
-      error: error instanceof Error ? error.message : error
+      model,
+      mediaUrl: context.mediaUrl,
+      error
+    });
+    console.error("Reka API analysis failed; using mock fallback.", {
+      ...debugInfo
     });
 
     return {
       ...createMockAnalysis(context),
       usedFallback: true,
-      fallbackReason: "invalid_response"
+      fallbackReason: "invalid_response",
+      debugInfo
     };
   }
 }
@@ -557,12 +593,79 @@ function getRekaEndpoint() {
   return `${configuredUrl}/chat/completions`;
 }
 
-function logRekaFailure(endpoint: string, status: number, body: string) {
+function logRekaFailure(debugInfo: RekaDebugInfo) {
   console.error("Reka API request failed; using mock fallback.", {
-    endpoint,
-    status,
-    body
+    ...debugInfo
   });
+}
+
+function buildRequestFailureDebugInfo(input: {
+  endpoint: string;
+  model: string;
+  status: number;
+  requestId: string | null;
+  body: string;
+  mediaUrl: string;
+}): RekaDebugInfo {
+  const parsedError = parseRekaErrorBody(input.body);
+
+  return {
+    endpoint: input.endpoint,
+    model: input.model,
+    status: input.status,
+    requestId: input.requestId,
+    errorType: parsedError.errorType,
+    errorMessage: parsedError.errorMessage,
+    mediaHost: getMediaHost(input.mediaUrl)
+  };
+}
+
+function buildInvalidResponseDebugInfo(input: {
+  endpoint: string;
+  model: string;
+  mediaUrl: string;
+  error: unknown;
+}): RekaDebugInfo {
+  return {
+    endpoint: input.endpoint,
+    model: input.model,
+    status: null,
+    requestId: null,
+    errorType: "invalid_response",
+    errorMessage:
+      input.error instanceof Error ? input.error.message : String(input.error),
+    mediaHost: getMediaHost(input.mediaUrl)
+  };
+}
+
+function parseRekaErrorBody(body: string) {
+  try {
+    const parsed = JSON.parse(body);
+    const error = parsed?.error;
+
+    return {
+      errorType: typeof error?.type === "string" ? error.type : null,
+      errorMessage:
+        typeof error?.message === "string"
+          ? error.message
+          : typeof parsed?.message === "string"
+            ? parsed.message
+            : body.trim().slice(0, 400) || null
+    };
+  } catch {
+    return {
+      errorType: null,
+      errorMessage: body.trim().slice(0, 400) || null
+    };
+  }
+}
+
+function getMediaHost(mediaUrl: string) {
+  try {
+    return new URL(mediaUrl).host;
+  } catch {
+    return null;
+  }
 }
 
 const reportAnalysisSchema = {

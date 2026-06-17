@@ -143,6 +143,7 @@ export async function POST(request: Request, context: RouteContext) {
       normalizedReport: normalizeSupabaseReport(updatedReport),
       usedFallback: analysis.usedFallback,
       fallbackReason: analysis.fallbackReason,
+      debugInfo: analysis.debugInfo,
       note
     });
   } catch (error) {

@@ -67,6 +67,15 @@ type AnalyzeResponse = {
   report?: ReportRow;
   usedFallback?: boolean;
   fallbackReason?: "missing_key" | "request_failed" | "invalid_response" | null;
+  debugInfo?: {
+    endpoint: string;
+    model: string;
+    status: number | null;
+    requestId: string | null;
+    errorType: string | null;
+    errorMessage: string | null;
+    mediaHost: string | null;
+  } | null;
   note?: string;
   error?: string;
 };
@@ -846,10 +855,23 @@ function getAnalysisMessage(payload: AnalyzeResponse) {
   }
 
   if (payload.fallbackReason === "request_failed") {
-    return "Mock AI analysis generated because the Reka request failed. Check the server console for endpoint, status, and response body.";
+    return [
+      "Mock AI analysis generated because the Reka request failed.",
+      payload.debugInfo?.status ? `Status ${payload.debugInfo.status}.` : null,
+      payload.debugInfo?.errorType ? `${payload.debugInfo.errorType}.` : null,
+      payload.debugInfo?.errorMessage ? payload.debugInfo.errorMessage : null,
+      payload.debugInfo?.requestId ? `Request ID: ${payload.debugInfo.requestId}.` : null
+    ]
+      .filter(Boolean)
+      .join(" ");
   }
 
-  return "Mock AI analysis generated because Reka returned an invalid or unreadable response. Check the server console for details.";
+  return [
+    "Mock AI analysis generated because Reka returned an invalid or unreadable response.",
+    payload.debugInfo?.errorMessage ?? null
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 async function insertActivityLog(
