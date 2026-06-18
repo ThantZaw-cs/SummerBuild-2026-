@@ -173,6 +173,8 @@ https://civic-lens-delta.vercel.app/
 
 The deployed app connects to Supabase for authentication, report storage, media uploads, map data, and role-based access. Reka AI analysis runs through server-side Next.js API routes, so API keys are not exposed to the browser.
 
+[![Watch the CivicLens demo](https://img.youtube.com/vi/Qf_vzgQXYbQ/hqdefault.jpg)](https://youtu.be/Qf_vzgQXYbQ)
+
 ## Demo Flow
 
 1. A citizen signs up or logs in.
