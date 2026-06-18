@@ -8,7 +8,7 @@
 
 | Member | Role |
 | --- | --- |
-| Member 1 | Frontend Lead |
+| Thant Zaw *(ThantZaw-cs)* | Frontend Lead |
 | Thant Zaw *(ThantZaw-cs)* | AI / Reka Integration |
 | Nicholas Tan | Backend & Database |
 | Paarthiban Nadimuthu | Product & Research |
