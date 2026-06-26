@@ -10,8 +10,8 @@
 | --- | --- |
 | Thant Zaw *(ThantZaw-cs)* | Frontend Lead |
 | Thant Zaw *(ThantZaw-cs)* | AI / Reka Integration |
-| Nicholas Tan | Backend & Database |
-| Paarthiban Nadimuthu | Product & Research |
+| Thant Zaw *(ThantZaw-cs)* | Backend & Database |
+| Thant Zaw *(ThantZaw-cs)* | Product & Research |
 
 ## Problem
 
